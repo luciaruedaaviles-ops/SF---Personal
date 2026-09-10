@@ -43,6 +43,10 @@ El número de líneas excluidas se muestra en el pie del tablero.
   diferenciador de esta fuente de datos frente al workbook original.
 - **Radar de Riesgo**: oportunidades abiertas **vencidas** (Fecha Real de Cierre ya pasada) o
   **estancadas** (días en la etapa actual muy por encima de la mediana del pipe abierto).
+- **Cerradas por Marca**: Ganada vs. Perdida por Marca (columna `Marca`, por línea de producto),
+  solo oportunidades ya decididas del año. "SONDA" (marca propia) se destaca aparte de las
+  marcas de terceros — sigue en la tabla completa, pero se excluye del gráfico porque su escala
+  (10-100x mayor que cualquier marca revendida) aplastaría el resto a líneas invisibles.
 
 ## Decisiones de diseño (por qué difiere del tablero original de SONDA)
 
