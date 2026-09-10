@@ -114,6 +114,8 @@
   }
   .seg button.active{background:var(--accent); color:#FFFFFF;}
   .controls-right{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .control-group{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .control-label{font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap;}
   select{
     font-family:'IBM Plex Mono'; font-size:12.5px; color:var(--text);
     background:var(--panel); border:1px solid var(--border); border-radius:8px;
@@ -332,7 +334,10 @@
       </div>
       <div class="controls-right">
         <div class="tabs" id="verticalTabs"></div>
-        <select id="yearSelect"></select>
+        <div class="control-group">
+          <span class="control-label">Año (Fecha Real de Cierre)</span>
+          <div class="tabs" id="yearTabs"></div>
+        </div>
         <button class="btn" id="reloadBtn">Cargar nueva semana</button>
       </div>
     </div>
@@ -1233,10 +1238,17 @@ function renderVerticalTabs(){
   el.innerHTML = opts.map(([val,label])=>`<button data-val="${val}" class="${STATE.vertical===val?'active':''}">${label}</button>`).join('');
   el.onclick = (e) => { const btn = e.target.closest('button'); if (!btn) return; STATE.vertical = btn.dataset.val; renderVerticalTabs(); renderAll(); };
 }
-function renderYearSelect(){
-  const el = document.getElementById('yearSelect');
-  el.innerHTML = STATE.years.map(y=>`<option value="${y}" ${y===STATE.año?'selected':''}>${y}</option>`).join('');
-  el.onchange = () => { STATE.año = Number(el.value); STATE.months = null; renderMonthPills(); renderAll(); };
+function renderYearTabs(){
+  const el = document.getElementById('yearTabs');
+  el.innerHTML = STATE.years.map(y=>`<button data-val="${y}" class="${y===STATE.año?'active':''}">${y}</button>`).join('');
+  el.onclick = (e) => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    STATE.año = Number(btn.dataset.val);
+    STATE.months = null;
+    renderYearTabs();
+    renderMonthPills();
+    renderAll();
+  };
 }
 function renderMonthPills(){
   const el = document.getElementById('monthPills');
@@ -1346,7 +1358,7 @@ function loadWorkbook(wb){
     document.getElementById('mdToggle').querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.val==='con'));
 
     renderVerticalTabs();
-    renderYearSelect();
+    renderYearTabs();
     renderMonthPills();
     renderEtapaMonthSelect();
     wireTopControls();
