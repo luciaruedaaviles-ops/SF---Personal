@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Torre de Control Comercial · Pipe con Productos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@500;600;700&family=Roboto:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#FFFFFF;
+    --panel:#FFFFFF;
+    --panel-2:#F2F4F8;
+    --border:#E1E5EC;
+    --border-soft:#EDF0F5;
+    --text:#12151B;
+    --text-dim:#5B6472;
+    --text-faint:#9AA2B1;
+    --accent:#1F5DF5;
+    --accent-dim:#DCE6FE;
+    --accent-glow: rgba(31,93,245,0.08);
+    --good:#1D9A63;
+    --warn:#C4820A;
+    --bad:#E14C3D;
+    --neutral-bar:#98A2B3;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(31,93,245,0.05), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(8,145,168,0.04), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Roboto',Arial,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .display{font-family:'Kumbh Sans',Arial,sans-serif;}
+  ::selection{background:var(--accent-glow);}
+  a{color:var(--accent);}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    padding:14px 28px;
+    background:rgba(255,255,255,0.88);
+    backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--border-soft);
+  }
+  .brand{display:flex; align-items:center; gap:14px;}
+  .brand-divider{width:1px; height:26px; background:var(--border); flex:none;}
+  .brand-text .t1{font-family:'Kumbh Sans';font-weight:600;font-size:15px;letter-spacing:0.2px;}
+  .brand-text .t2{font-size:11px;color:var(--text-dim); margin-top:1px;}
+  .topbar-right{display:flex;align-items:center;gap:10px; flex-wrap:wrap;}
+  .pill{
+    font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--text-dim);
+    border:1px solid var(--border); border-radius:999px; padding:5px 12px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good);}
+  .btn{
+    font-family:'Roboto'; font-weight:600; font-size:12.5px;
+    border:1px solid var(--border); background:var(--panel-2); color:var(--text);
+    padding:8px 14px; border-radius:8px; cursor:pointer;
+    transition:border-color .15s, transform .1s;
+  }
+  .btn:hover{border-color:var(--accent);}
+  .btn:active{transform:scale(0.98);}
+
+  /* ---------- Layout ---------- */
+  .wrap{max-width:1320px;margin:0 auto;padding:0 28px 80px;}
+  .hidden{display:none !important;}
+
+  /* ---------- Upload / empty state ---------- */
+  .drop-screen{
+    min-height:82vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:40px 20px;
+  }
+  .drop-eyebrow{font-family:'IBM Plex Mono'; font-size:12px; letter-spacing:2px; color:var(--accent); text-transform:uppercase; margin-bottom:18px;}
+  .drop-title{font-family:'Kumbh Sans'; font-weight:600; font-size:clamp(26px,4vw,42px); max-width:720px; line-height:1.15; margin:0 0 14px; text-wrap:balance;}
+  .drop-sub{color:var(--text-dim); font-size:15px; max-width:540px; line-height:1.6; margin-bottom:34px;}
+  .dropzone{
+    width:min(560px,92vw); border:1.5px dashed var(--border); border-radius:16px;
+    padding:38px 30px; background:var(--panel); cursor:pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .dropzone:hover, .dropzone.drag{ border-color:var(--accent); background:var(--panel-2); }
+  .dropzone-icon{width:46px;height:46px;margin:0 auto 14px;border-radius:12px;background:var(--accent-glow);display:flex;align-items:center;justify-content:center;}
+  .dropzone-title{font-weight:600; font-size:15px; margin-bottom:4px;}
+  .dropzone-sub{font-size:12.5px; color:var(--text-faint);}
+  .drop-error{margin-top:16px; color:var(--bad); font-size:13px; font-family:'IBM Plex Mono'; max-width:540px; line-height:1.5;}
+  .drop-steps{display:flex; gap:26px; margin-top:44px; flex-wrap:wrap; justify-content:center;}
+  .drop-step{max-width:200px; text-align:left;}
+  .drop-step .n{font-family:'IBM Plex Mono'; color:var(--accent); font-size:12px;}
+  .drop-step .d{font-size:12.5px; color:var(--text-dim); margin-top:4px; line-height:1.5;}
+  .drop-assumptions{margin-top:36px; max-width:640px; text-align:left; font-size:11.5px; color:var(--text-faint); line-height:1.6; padding:14px 18px; border:1px solid var(--border-soft); border-radius:10px; background:var(--panel-2);}
+  .drop-assumptions b{color:var(--text-dim);}
+
+  /* ---------- Controls ---------- */
+  .controls{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;
+    padding:22px 0 6px;
+  }
+  .seg{ display:flex; background:var(--panel); border:1px solid var(--border); border-radius:9px; padding:3px; }
+  .seg button{
+    font-family:'Roboto'; font-weight:600; font-size:12.5px; color:var(--text-dim);
+    background:transparent; border:none; padding:7px 14px; border-radius:6px; cursor:pointer;
+  }
+  .seg button.active{background:var(--accent); color:#FFFFFF;}
+  .controls-right{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  select{
+    font-family:'IBM Plex Mono'; font-size:12.5px; color:var(--text);
+    background:var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding:8px 10px; cursor:pointer;
+  }
+
+  /* ---------- Section headers ---------- */
+  .section{margin-top:46px;}
+  .section-head{display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin-bottom:16px; flex-wrap:wrap;}
+  .section-eyebrow{font-family:'IBM Plex Mono'; font-size:11px; letter-spacing:1.8px; text-transform:uppercase; color:var(--accent);}
+  .section-title{font-family:'Kumbh Sans'; font-weight:600; font-size:21px; margin:4px 0 0; text-wrap:balance;}
+  .section-note{font-size:12.5px; color:var(--text-faint); max-width:440px; text-align:right; line-height:1.5;}
+  .subsection-head{display:flex; align-items:center; justify-content:space-between; margin:24px 0 14px; padding-top:20px; border-top:1px solid var(--border-soft); flex-wrap:wrap; gap:10px;}
+  .subsection-title{font-family:'Kumbh Sans'; font-weight:600; font-size:15.5px; color:var(--text-dim);}
+
+  /* ---------- KPI cards ---------- */
+  .kpi-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px;}
+  @media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  @media(max-width:560px){.kpi-grid{grid-template-columns:1fr;}}
+  .kpi-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px 20px 18px; position:relative; overflow:hidden;
+    box-shadow:0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.05);
+  }
+  .kpi-card .label{font-size:11.5px; color:var(--text-dim); font-weight:600; letter-spacing:0.4px; text-transform:uppercase;}
+  .kpi-card .value{font-family:'IBM Plex Mono'; font-size:26px; font-weight:600; margin-top:10px; letter-spacing:-0.5px;}
+  .kpi-card .sub{font-size:12px; color:var(--text-faint); margin-top:6px;}
+  .kpi-card .sub.good{color:var(--good);}
+  .kpi-card .sub.bad{color:var(--bad);}
+  .kpi-card .bar-track{height:4px; border-radius:3px; background:var(--panel-2); margin-top:14px; overflow:hidden;}
+  .kpi-card .bar-fill{height:100%; border-radius:3px; background:var(--accent);}
+
+  /* ---------- Panel ---------- */
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.05); min-width:0;}
+  .panel-title{font-weight:600; font-size:13.5px; margin:0 0 14px;}
+  .two-col{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px;}
+  @media(max-width:900px){.two-col{grid-template-columns:minmax(0,1fr);}}
+
+  .chart-panel{margin-top:14px;}
+  .chart-box{position:relative; height:320px; width:100%;}
+  @media(max-width:640px){.chart-box{height:260px;}}
+  .pct-strip{display:flex; gap:10px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border-soft); flex-wrap:wrap;}
+  .pct-chip{flex:1; min-width:110px; text-align:center;}
+  .pct-chip .pc-label{font-size:11px; color:var(--text-faint); font-weight:600; text-transform:uppercase; letter-spacing:0.4px;}
+  .pct-chip .pc-value{font-family:'IBM Plex Mono'; font-size:17px; font-weight:700; margin-top:3px;}
+  .pct-chip .pc-formula{font-family:'IBM Plex Mono'; font-size:10px; color:var(--text-faint); margin-top:2px;}
+  .legend-row{display:flex; gap:18px; flex-wrap:wrap; margin-top:14px; padding-top:14px; border-top:1px solid var(--border-soft);}
+  .legend-item{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text-dim);}
+  .legend-sw{width:9px;height:9px;border-radius:2px;}
+
+  /* ---------- Gauge ---------- */
+  .gauge-grid{display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:16px;}
+  @media(max-width:900px){.gauge-grid{grid-template-columns:1fr;}}
+  .gauge-wrap{display:flex; flex-direction:column; align-items:center; justify-content:center; padding:10px 10px 4px;}
+  .gauge-value{font-family:'IBM Plex Mono'; font-size:38px; font-weight:700; margin-top:-8px;}
+  .gauge-caption{font-size:12.5px; color:var(--text-dim); text-align:center; margin-top:6px; max-width:320px; line-height:1.5;}
+  .gauge-flag{ margin-top:14px; font-family:'IBM Plex Mono'; font-size:11.5px; padding:6px 12px; border-radius:999px; display:flex; align-items:center; gap:6px; }
+  .gauge-flag.bad{color:var(--bad); border:1px solid rgba(225,76,61,0.35); background:rgba(225,76,61,0.08);}
+  .gauge-flag.warn{color:var(--warn); border:1px solid rgba(196,130,10,0.35); background:rgba(196,130,10,0.08);}
+  .gauge-flag.good{color:var(--good); border:1px solid rgba(29,154,99,0.35); background:rgba(29,154,99,0.08);}
+
+  .vcov-row-wrap{border-bottom:1px solid var(--border-soft);}
+  .vcov-row-wrap:last-child{border-bottom:none;}
+  .vcov-row{display:flex; align-items:center; gap:12px; padding:11px 0;}
+  .vcov-name{width:70px; font-size:12.5px; font-weight:600; flex:none;}
+  .vcov-track{flex:1; height:8px; border-radius:5px; background:var(--panel-2); position:relative; overflow:visible;}
+  .vcov-fill{height:100%; border-radius:5px;}
+  .vcov-marker{position:absolute; top:-3px; width:2px; height:14px; background:var(--text-faint);}
+  .vcov-val{width:60px; text-align:right; font-family:'IBM Plex Mono'; font-size:13.5px; font-weight:700; color:var(--text); flex:none;}
+
+  /* ---------- Heatmap / tables ---------- */
+  .etapa-totals{display:flex; gap:10px; margin:14px 0; flex-wrap:wrap;}
+  .etapa-total-chip{flex:0 1 260px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; box-shadow:0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.05);}
+  .etapa-total-chip .etc-label{font-size:11px; color:var(--text-faint); font-weight:600; text-transform:uppercase; letter-spacing:0.4px;}
+  .etapa-total-chip .etc-value{font-family:'IBM Plex Mono'; font-size:19px; font-weight:700; margin-top:4px;}
+  .etapa-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px;}
+  @media(max-width:1100px){.etapa-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  @media(max-width:640px){.etapa-grid{grid-template-columns:minmax(0,1fr);} .kpi-grid{grid-template-columns:minmax(0,1fr);} .gauge-grid{grid-template-columns:minmax(0,1fr);}}
+  .etapa-card .etapa-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+  .etapa-tag{font-size:11px; font-weight:700; letter-spacing:0.5px; padding:3px 9px; border-radius:5px; text-transform:uppercase;}
+  .etapa-total{font-family:'IBM Plex Mono'; font-weight:600; font-size:15px;}
+  .heatmap-table{border-collapse:separate; border-spacing:2px;}
+  .heatmap-table td{border-top:none; border-radius:5px; padding:7px 8px;}
+  .heatmap-table th{padding-bottom:8px;}
+  table{width:100%; border-collapse:collapse; font-size:11.5px;}
+  th{text-align:right; font-weight:500; color:var(--text-faint); padding:5px 6px; font-family:'IBM Plex Mono'; font-size:10.5px;}
+  th:first-child, td:first-child{text-align:left;}
+  td{text-align:right; padding:5px 6px; font-family:'IBM Plex Mono'; color:var(--text-dim); border-top:1px solid var(--border-soft);}
+  td:first-child{color:var(--text); font-family:'Roboto'; font-weight:500; font-size:11.5px;}
+  tr.total-row td{color:var(--text); font-weight:600; border-top:1px solid var(--border);}
+
+  /* ---------- Tabs / pills ---------- */
+  .tabs{display:flex; gap:6px; flex-wrap:wrap;}
+  .tabs button{
+    font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--text-dim);
+    background:var(--panel-2); border:1px solid var(--border); border-radius:7px;
+    padding:6px 12px; cursor:pointer;
+  }
+  .tabs button.active{color:#FFFFFF; background:var(--accent); border-color:var(--accent);}
+  .month-pills{display:flex; gap:5px; flex-wrap:wrap;}
+  .month-pills button{
+    font-family:'IBM Plex Mono'; font-size:12px; font-weight:600; color:var(--text-dim);
+    background:var(--panel-2); border:1px solid var(--border); border-radius:7px;
+    padding:7px 11px; cursor:pointer; min-width:44px;
+  }
+  .month-pills button.active{color:#FFFFFF; background:var(--accent); border-color:var(--accent);}
+  .month-pills button:hover:not(.active){border-color:var(--accent);}
+
+  /* ---------- Ranking bars (KAM / Producto) ---------- */
+  .rank-row{display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid var(--border-soft);}
+  .rank-row:last-child{border-bottom:none;}
+  .rank-name{width:230px; flex:none; font-size:12px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .rank-track{flex:1; height:9px; border-radius:5px; background:var(--panel-2); overflow:hidden;}
+  .rank-fill{height:100%; border-radius:5px; background:var(--accent);}
+  .rank-val{width:76px; text-align:right; font-family:'IBM Plex Mono'; font-size:12.5px; font-weight:700; flex:none;}
+  @media(max-width:640px){.rank-name{width:120px;}}
+
+  /* ---------- KAM rows (nombre + 2 métricas + barra, todo apilable) ---------- */
+  .kam-row{padding:10px 0; border-bottom:1px solid var(--border-soft);}
+  .kam-row:last-child{border-bottom:none;}
+  .kam-row-top{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+  .kam-row-name{font-size:12.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
+  .kam-row-value{font-family:'IBM Plex Mono'; font-size:12.5px; font-weight:700; flex:none;}
+  .kam-row-meta{font-size:11px; color:var(--text-faint); margin-top:2px;}
+  .kam-row-meta b{color:var(--good); font-weight:600;}
+  .kam-row-track{height:7px; border-radius:5px; background:var(--panel-2); margin-top:7px; overflow:hidden;}
+  .kam-row-fill{height:100%; border-radius:5px; background:var(--accent);}
+
+  /* ---------- Risk badges ---------- */
+  .risk-badge{font-family:'IBM Plex Mono'; font-size:10px; font-weight:700; padding:2px 7px; border-radius:5px; display:inline-block; margin-right:4px; letter-spacing:0.3px;}
+  .risk-badge.vencida{color:var(--bad); background:rgba(225,76,61,0.1);}
+  .risk-badge.estancada{color:var(--warn); background:rgba(196,130,10,0.1);}
+
+  /* ---------- Footer ---------- */
+  .footer{margin-top:60px; padding-top:20px; border-top:1px solid var(--border-soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  .footer-text{font-size:11.5px; color:var(--text-faint); font-family:'IBM Plex Mono';}
+  .footer-filters{margin-top:30px; font-size:11px; color:var(--text-faint); line-height:1.7; background:var(--panel-2); border-radius:10px; padding:14px 18px;}
+  .footer-filters b{color:var(--text-dim);}
+
+  canvas{max-width:100%;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-divider"></div>
+    <div class="brand-text">
+      <div class="t1">Torre de Control Comercial</div>
+      <div class="t2" id="topbarSub">Pipe con Productos · Sales Operations</div>
+    </div>
+  </div>
+  <div class="topbar-right" id="topbarActions"></div>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ EMPTY / UPLOAD STATE ============ -->
+  <div class="drop-screen" id="dropScreen">
+    <div class="drop-eyebrow">Pipe &amp; Forecast · Corte semanal</div>
+    <h1 class="drop-title">Sube el Excel de "Pipe con productos FCST" y reconstruyo todo el tablero al instante</h1>
+    <p class="drop-sub">Lee directamente la hoja "Pipe con productos FCST" y las cuotas de la hoja "Cuotas" del mismo workbook que exportas cada semana. Nada se sube a ningún servidor — todo el cálculo ocurre en tu navegador.</p>
+
+    <div class="dropzone" id="dropzone">
+      <div class="dropzone-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1F5DF5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <div class="dropzone-title">Arrastra tu archivo aquí</div>
+      <div class="dropzone-sub">o haz clic para buscarlo · .xlsx</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+    </div>
+    <div class="drop-error hidden" id="dropError"></div>
+
+    <div class="drop-steps">
+      <div class="drop-step"><div class="n">01 · Cada semana</div><div class="d">Exporta el reporte "Pipe con productos FCST" desde Salesforce, con la hoja "Cuotas" en el mismo libro.</div></div>
+      <div class="drop-step"><div class="n">02 · Sube</div><div class="d">Arrástralo aquí — no requiere limpieza previa.</div></div>
+      <div class="drop-step"><div class="n">03 · Listo</div><div class="d">Cuota, forecast, cobertura, pipe por producto y por KAM se recalculan solos.</div></div>
+    </div>
+
+    <div class="drop-assumptions">
+      <b>Criterios aplicados:</b> Ganada = Etapa "Cerrada Ganada" · Forecast = Ganada + Comprometida · Pipe Abierto = Comprometida + Probable + Indeterminada (sólo oportunidades no cerradas).
+      Como este archivo es un corte único (no trae Best Case/Upside ni historial semanal), el tablero no incluye Best Case ni Movimiento Semanal, y la Cuota por KAM no está disponible (la hoja "Cuotas" sólo trae metas por Vertical y por Línea de Servicio).
+    </div>
+  </div>
+
+  <!-- ============ DASHBOARD ============ -->
+  <div id="dashboard" class="hidden">
+
+    <div class="controls">
+      <div class="seg" id="mdToggle">
+        <button data-val="con" class="active">Con Mega Deals</button>
+        <button data-val="sin">Sin Mega Deals</button>
+      </div>
+      <div class="controls-right">
+        <div class="tabs" id="verticalTabs"></div>
+        <select id="yearSelect"></select>
+        <button class="btn" id="reloadBtn">Cargar nueva semana</button>
+      </div>
+    </div>
+
+    <!-- ===== MONTH SUMMARY ===== -->
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Resumen Ejecutivo</div>
+          <h2 class="section-title">Corte Mensual</h2>
+        </div>
+      </div>
+      <div class="section-note" id="monthFormulaNote" style="text-align:left; max-width:none; margin-bottom:14px;">Ganada = Etapa "Cerrada Ganada" · Forecast = Ganada + Comprometida · Pipe Abierto = Comprometida + Probable + Indeterminada.</div>
+
+      <div class="subsection-head" style="border-top:none; padding-top:0; margin-top:0;">
+        <div class="subsection-title">Selecciona el período (por Fecha Real de Cierre)</div>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div class="month-pills" id="monthPills"></div>
+          <div style="display:flex; gap:5px;">
+            <button class="btn" id="monthSelectAllBtn" style="padding:6px 10px; font-size:11.5px;">Todos</button>
+            <button class="btn" id="monthClearBtn" style="padding:6px 10px; font-size:11.5px;">Limpiar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-grid" id="monthKpis"></div>
+
+      <div class="panel chart-panel">
+        <div class="panel-title" id="monthChartTitle">Cuota vs. Ganada vs. Forecast por Vertical (USD M)</div>
+        <div class="chart-box"><canvas id="monthVerticalChart"></canvas></div>
+        <div class="pct-strip" id="monthPctStrip"></div>
+      </div>
+    </div>
+
+    <!-- ===== COVERAGE ===== -->
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Pipeline</div>
+          <h2 class="section-title">Cobertura vs. piso mínimo</h2>
+        </div>
+      </div>
+      <div class="section-note" style="text-align:left; max-width:none; margin-bottom:14px;">Cobertura = Pipe Abierto ÷ Cuota H2 (Jul–Dic) del año seleccionado. Mínimo aceptable 3x · Meta 4x.</div>
+      <div class="gauge-grid">
+        <div class="panel gauge-wrap">
+          <svg id="gaugeSvg" width="300" height="180" viewBox="0 0 300 180"></svg>
+          <div class="gauge-value mono" id="gaugeValue">—</div>
+          <div class="gauge-caption" id="gaugeCaption"></div>
+          <div class="gauge-flag" id="gaugeFlag"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Cobertura por Vertical</div>
+          <div id="vcovList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PRESUPUESTO ===== -->
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Cumplimiento de Presupuesto</div>
+          <h2 class="section-title" id="presupuestoTitle">Ganada vs. Presupuesto</h2>
+        </div>
+      </div>
+      <div class="section-note" style="text-align:left; max-width:none; margin-bottom:14px;">Año completo, sin filtrar por mes. La hoja "Cuotas" trae metas de Vertical y de Línea de Servicio por separado — no cruzadas — por eso se muestran en dos tablas independientes.</div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-title">Por Vertical</div>
+          <div style="overflow-x:auto;"><table id="presupuestoVertTable"></table></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Por Línea de Servicio</div>
+          <div style="overflow-x:auto;"><table id="presupuestoHorizTable"></table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== KAM ===== -->
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Ejecución Comercial</div>
+          <h2 class="section-title">Pipe abierto por KAM</h2>
+        </div>
+      </div>
+      <div class="section-note" style="text-align:left; max-width:none; margin-bottom:14px;">Ganado = año seleccionado, por Fecha Real de Cierre · Pipe HOY = pipe abierto vigente, sin filtrar por mes. La hoja "Cuotas" no trae meta individual por KAM, por eso no se muestra columna de Cuota/GAP.</div>
+      <div class="panel">
+        <div id="kamList"></div>
+      </div>
+    </div>
+
+    <!-- ===== ETAPA GRID ===== -->
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Composición del Pipe</div>
+          <h2 class="section-title">Pipe abierto por Estatus, Vertical y Línea de Servicio</h2>
+        </div>
+        <select id="etapaMonthSelect"></select>
+      </div>
+      <div class="etapa-totals" id="etapaTotals"></div>
+      <div class="etapa-grid" id="etapaGrid"></div>
+      <div class="panel" id="etapaTotalsPanel" style="margin-top:14px;"></div>
+    </div>
+
+    <!-- ===== PRODUCTOS ===== -->
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Composición del Pipe</div>
+          <h2 class="section-title">Pipe abierto por Producto</h2>
+        </div>
+      </div>
+      <div class="section-note" style="text-align:left; max-width:none; margin-bottom:14px;">Cada línea de producto de una oportunidad se cuenta por su propio monto — la suma coincide con el Pipe Abierto total.</div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-title">Top familias de producto</div>
+          <div id="familiaRank"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Top productos</div>
+          <div id="productoRank"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RIESGO ===== -->
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Radar de Riesgo</div>
+          <h2 class="section-title">Oportunidades abiertas con señales de riesgo</h2>
+        </div>
+        <div class="section-note" id="riesgoNote" style="text-align:left; max-width:460px; margin:0;"></div>
+      </div>
+      <div class="panel">
+        <div class="legend-row" style="margin:0 0 12px; padding:0;">
+          <div class="legend-item"><span class="risk-badge vencida">VENCIDA</span>la Fecha Real de Cierre ya pasó y sigue abierta</div>
+          <div class="legend-item"><span class="risk-badge estancada">ESTANCADA</span>lleva más tiempo del habitual en su etapa actual</div>
+        </div>
+        <div style="overflow-x:auto; max-height:480px; overflow-y:auto;"><table id="riesgoTable"></table></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-text" id="footerCorte"></div>
+      <div class="footer-text">Torre de Control Comercial · cálculo local en el navegador, sin envío de datos a servidores.</div>
+    </div>
+    <div class="footer-filters" id="footerFiltros"></div>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONSTANTES Y ESTADO
+============================================================ */
+const VERT_ORDER = ['Banca & Seguros','Multi Industrias','Retail & Comercio','Smart Cities & Mobility'];
+const VERT_SHORT = {'Banca & Seguros':'B&S','Multi Industrias':'MI','Retail & Comercio':'R&C','Smart Cities & Mobility':'SC&M'};
+const VERT_COLOR = {'Banca & Seguros':'#3D6BFF','Multi Industrias':'#0891A8','Retail & Comercio':'#C4820A','Smart Cities & Mobility':'#8B5FBF'};
+function vertGroup(v){ return VERT_ORDER.includes(v) ? v : 'Otras'; }
+
+// Agrupación curada de "Delivery Vertical/Línea de Servicios" (texto crudo de Salesforce, muy
+// granular y con variantes) a un pequeño set de líneas de servicio legibles en el tablero —
+// misma idea que el "Grupo LS" del tablero original, pero construida aquí porque este archivo
+// no trae ese campo ya curado.
+const HORIZ_ORDER = ['Serv. Plataforma','Workplace Services','Data Center','Ciberseguridad','DCom','Smart Cities & Mobility','Banca & Seguros','Soluciones Verticales','Otras líneas'];
+const HORIZ_MAP = {
+  'Digital Operations - Serv. de Plat. - Productos':'Serv. Plataforma',
+  'Digital Operations - Serv. de Plat. - Serv. Gestionados':'Serv. Plataforma',
+  'Digital Operations - Workplace Services':'Workplace Services',
+  'Digital Operations - Data Center':'Data Center',
+  'Digital Services - Cloud & Data Center':'Data Center',
+  'Digital Operations - Cloud':'Data Center',
+  'Digital Operations - DCom Proyectos Especiales':'DCom',
+  'Digital Operations - DCom Red Empresarial':'DCom',
+  'Digital Operations - DCom Red Industrial':'DCom',
+  'Digital Operations - DCom Infraestructura Cliente':'DCom',
+  'Digital Operations - Cybersecurity':'Ciberseguridad',
+  'SC&M - Mobility':'Smart Cities & Mobility',
+  'SC&M - Smart Cities':'Smart Cities & Mobility',
+  'Banca & Seguros - B&S':'Banca & Seguros',
+  'Banca & Seguros - BPO':'Banca & Seguros',
+  'Banca & Seguros - Seguros':'Banca & Seguros',
+  'Sol Vert':'Soluciones Verticales'
+};
+function horizShort(raw){
+  if (!raw) return 'Otras líneas';
+  const r = String(raw).trim();
+  return HORIZ_MAP[r] || 'Otras líneas';
+}
+
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+const STATE = {
+  productRows: [],   // una fila por línea de producto (todas)
+  oppRows: [],        // una fila por oportunidad única (dedupe por ID Oportunidad)
+  quotas: {},          // {año: {V:{nombre:[12 valores]}, H:{nombre:[12 valores]}}}
+  years: [],
+  snapshotDate: null, // fecha del corte, leída del propio reporte ("A partir de ...")
+  generatedBy: null,
+  reportFilters: [],  // líneas "Filtrado por" del encabezado del reporte de origen
+  includeMD: true,
+  año: null,
+  vertical: 'ALL',
+  months: null,        // null = todos los meses del año
+  etapaMonth: 'ALL',
+  charts: {}
+};
+
+function sum(arr, key){ return arr.reduce((s,r)=>s+(r[key]||0),0); }
+function sum12(arr){ return (arr||[]).reduce((a,b)=>a+(b||0),0); }
+function fmtM(v){
+  if (v == null || isNaN(v)) return '—';
+  const s = v < 0 ? '-' : '';
+  return s + '$' + Math.abs(v).toFixed(2) + 'M';
+}
+function fmtKM(v){
+  if (v == null || isNaN(v)) return '—';
+  const abs = Math.abs(v);
+  const s = v < 0 ? '-' : '';
+  if (abs === 0) return '$0';
+  if (abs < 1) return s + '$' + Math.round(abs*1000) + 'K';
+  return s + '$' + abs.toFixed(1) + 'M';
+}
+function fmtPct(v){
+  if (v == null || isNaN(v)) return '—';
+  return (v*100).toFixed(1) + '%';
+}
+function fmtDateHuman(d){
+  if (!d) return '—';
+  return d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'});
+}
+function parseDMY(v){
+  if (v == null || v === '') return null;
+  if (v instanceof Date && !isNaN(v)) return v;
+  const m = String(v).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  return new Date(Date.UTC(Number(m[3]), Number(m[2])-1, Number(m[1])));
+}
+
+/* ============================================================
+   PARSING
+============================================================ */
+function findSheet(wb, needle){
+  const low = needle.toLowerCase();
+  return wb.SheetNames.find(n => n.trim().toLowerCase() === low)
+      || wb.SheetNames.find(n => n.trim().toLowerCase().includes(low.split(' ')[0]));
+}
+function sheetAOA(wb, name){
+  return XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, raw:true, defval:null});
+}
+function findHeaderRowAOA(aoa, marker, maxScan=40){
+  for (let r=0; r<Math.min(aoa.length, maxScan); r++){
+    const row = aoa[r] || [];
+    for (let c=0; c<row.length; c++){
+      if (row[c] != null && String(row[c]).trim() === marker) return {r,c};
+    }
+  }
+  return null;
+}
+
+function parseMeta(wb){
+  // Busca en las primeras filas de cada hoja el texto "A partir de <fecha> <hora> ... Generado por X"
+  // y las líneas "Filtrado por" del encabezado del reporte de Salesforce, para mostrar de dónde
+  // viene el corte (mismo tipo de trazabilidad que trae cualquier reporte exportado de Salesforce).
+  let snapshotDate = null, generatedBy = null;
+  const filters = [];
+  for (const name of wb.SheetNames){
+    const aoa = sheetAOA(wb, name);
+    for (let r=0; r<Math.min(aoa.length, 20); r++){
+      const cell = (aoa[r]||[]).find(v=>v!=null && typeof v==='string' && v.includes('A partir de'));
+      if (cell){
+        const m = cell.match(/A partir de (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})/);
+        if (m) snapshotDate = new Date(`${m[1]}T${m[2]}Z`);
+        const gm = cell.match(/Generado por ([^•]+)/);
+        if (gm) generatedBy = gm[1].trim();
+      }
+    }
+    let inFilters = false;
+    for (let r=0; r<Math.min(aoa.length, 20); r++){
+      const v = (aoa[r]||[]).find(x=>x!=null);
+      if (v == null) continue;
+      const s = String(v).trim();
+      if (s === 'Filtrado por'){ inFilters = true; continue; }
+      if (inFilters){
+        if (s === '' ) break;
+        filters.push(s);
+      }
+    }
+    if (snapshotDate) break;
+  }
+  return {snapshotDate, generatedBy, filters};
+}
+
+function parsePipe(wb){
+  const sheetName = findSheet(wb, 'pipe con productos fcst') || findSheet(wb, 'pipe');
+  if (!sheetName) throw new Error('No encontré la hoja "Pipe con productos FCST" en el archivo.');
+  const aoa = sheetAOA(wb, sheetName);
+  const hdr = findHeaderRowAOA(aoa, 'ID Oportunidad');
+  if (!hdr) throw new Error('No encontré el encabezado "ID Oportunidad" en la hoja de Pipe.');
+  const headerRow = aoa[hdr.r];
+  const col = {};
+  headerRow.forEach((h,i)=>{ if (h!=null && String(h).trim()!=='') col[String(h).trim()] = i; });
+  const get = (row,key)=> col[key]!=null ? row[col[key]] : null;
+
+  const rows = [];
+  for (let r=hdr.r+1; r<aoa.length; r++){
+    const row = aoa[r]; if (!row) continue;
+    const id = get(row,'ID Oportunidad');
+    if (id == null || id === '') continue;
+    const etapa = String(get(row,'Etapa') || '').trim();
+    const fechaCierre = parseDMY(get(row,'Fecha Real de Cierre'));
+    const fechaCreacion = parseDMY(get(row,'Fecha de creación'));
+    const megaRaw = get(row,'Mega Deal/Big Deal');
+    const abierto = etapa !== '' && !etapa.toUpperCase().startsWith('CERRADA');
+    rows.push({
+      id, etapa,
+      cuenta: get(row,'Cuenta') || '',
+      tema: get(row,'Tema') || '',
+      montoUSD: (Number(get(row,'Monto (convertido)')) || 0) / 1e6,
+      precioTotalUSD: (Number(get(row,'Precio total (convertido)')) || 0) / 1e6,
+      fechaCierre, fechaCreacion,
+      estatus: String(get(row,'Estatus') || '').trim(),
+      vertical: String(get(row,'Vertical') || '').trim(),
+      horiz: horizShort(get(row,'Delivery Vertical/Línea de Servicios')),
+      kam: String(get(row,'Propietario') || '').trim(),
+      megaDeal: megaRaw === true || String(megaRaw).trim().toUpperCase() === 'TRUE' || String(megaRaw).trim().toUpperCase() === 'VERDADERO',
+      producto: get(row,'Nombre del producto') || '(Sin producto)',
+      familia: get(row,'Familia de productos') || '(Sin familia)',
+      duracionEtapa: Number(get(row,'Duración de la etapa')) || 0,
+      abierto,
+      ganada: etapa === 'Cerrada Ganada',
+      año: fechaCierre ? fechaCierre.getUTCFullYear() : null
+    });
+  }
+  if (!rows.length) throw new Error('La hoja de Pipe no tiene filas de datos debajo del encabezado.');
+  return rows;
+}
+
+function dedupeOpps(productRows){
+  const map = new Map();
+  for (const r of productRows) if (!map.has(r.id)) map.set(r.id, r);
+  return [...map.values()];
+}
+
+function parseCuotas(wb){
+  const sheetName = findSheet(wb, 'cuotas');
+  if (!sheetName) return {};
+  const aoa = sheetAOA(wb, sheetName);
+  const result = {};
+  const titleRe = /CUOTAS\s+(\d{4})\s+POR\s+(VERTICAL|HORIZONTAL)/i;
+  for (let r=0; r<aoa.length; r++){
+    const row = aoa[r] || [];
+    for (let c=0; c<row.length; c++){
+      const v = row[c];
+      if (v == null) continue;
+      const m = String(v).match(titleRe);
+      if (!m) continue;
+      const year = Number(m[1]);
+      const type = m[2].toUpperCase() === 'VERTICAL' ? 'V' : 'H';
+      let headerR = -1;
+      for (let rr=r+1; rr<Math.min(r+8, aoa.length); rr++){
+        if ((aoa[rr]||[]).some(cell => cell!=null && String(cell).trim().toUpperCase()==='AÑO')){ headerR = rr; break; }
+      }
+      if (headerR < 0) continue;
+      const headerRow = aoa[headerR];
+      const nameCol = headerRow.findIndex(cell => cell!=null && String(cell).trim().toUpperCase() === (type==='V' ? 'VERTICAL':'HORIZONTAL'));
+      if (nameCol < 0) continue;
+      const data = {};
+      for (let rr=headerR+1; rr<aoa.length; rr++){
+        const rrow = aoa[rr] || [];
+        const name = rrow[nameCol];
+        if (name == null || String(name).trim()==='') break;
+        const nameStr = String(name).trim();
+        const vals = [];
+        for (let mc=0; mc<12; mc++){ const cell = rrow[nameCol+1+mc]; vals.push(typeof cell==='number' ? cell : (Number(cell)||0)); }
+        data[nameStr.toUpperCase() === 'TOTAL' ? 'TOTAL' : nameStr] = vals;
+        if (nameStr.toUpperCase() === 'TOTAL') break;
+      }
+      if (!result[year]) result[year] = {};
+      result[year][type] = data;
+    }
+  }
+  return result;
+}
+
+function getCuota(año, key, months, type){
+  const q = STATE.quotas[año] && STATE.quotas[año][type];
+  if (!q) return 0;
+  const name = key === 'ALL' ? 'TOTAL' : key;
+  const vals = q[name];
+  if (!vals) return 0;
+  const list = (months && months.length) ? months : [1,2,3,4,5,6,7,8,9,10,11,12];
+  return list.reduce((s,m)=>s+(vals[m-1]||0), 0);
+}
+function hasQuotaFor(año, type){ return !!(STATE.quotas[año] && STATE.quotas[año][type]); }
+
+/* ============================================================
+   CÁLCULOS
+============================================================ */
+function computeMonth(año, months, includeMD, vertical){
+  const list = (months && months.length) ? months : null;
+  const inMonth = r => !list || (r.fechaCierre && list.includes(r.fechaCierre.getUTCMonth()+1));
+  const allBase = STATE.oppRows.filter(r => r.año===año && (includeMD || !r.megaDeal) && inMonth(r));
+  const scoped = vertical==='ALL' ? allBase : allBase.filter(r=>vertGroup(r.vertical)===vertical);
+
+  const ganada = sum(scoped.filter(r=>r.ganada),'montoUSD');
+  const comprometida = sum(scoped.filter(r=>r.abierto && r.estatus==='Comprometida'),'montoUSD');
+  const probable = sum(scoped.filter(r=>r.abierto && r.estatus==='Probable'),'montoUSD');
+  const indeterminada = sum(scoped.filter(r=>r.abierto && r.estatus==='Indeterminada'),'montoUSD');
+  const forecast = ganada + comprometida;
+  const pipeAbierto = comprometida + probable + indeterminada;
+  const cuota = getCuota(año, vertical, list, 'V');
+  const gap = forecast - cuota;
+
+  const byVertical = {};
+  for (const v of VERT_ORDER){
+    const bv = allBase.filter(r=>vertGroup(r.vertical)===v);
+    const g = sum(bv.filter(r=>r.ganada),'montoUSD');
+    const c = sum(bv.filter(r=>r.abierto && r.estatus==='Comprometida'),'montoUSD');
+    const vcuota = getCuota(año, v, list, 'V');
+    byVertical[v] = {cuota:vcuota, ganada:g, forecast:g+c, pctCumplido: vcuota ? (g+c)/vcuota : null};
+  }
+  return {cuota, ganada, comprometida, forecast, probable, indeterminada, pipeAbierto, gap, hasQuota: hasQuotaFor(año,'V'), byVertical};
+}
+
+function computeCoverage(año, includeMD){
+  const openAll = STATE.oppRows.filter(r => r.año===año && r.abierto && (includeMD || !r.megaDeal));
+  const pipeTotal = sum(openAll,'montoUSD');
+  const cuotaH2 = getCuota(año,'ALL',[7,8,9,10,11,12],'V');
+  const coverage = cuotaH2 ? pipeTotal/cuotaH2 : null;
+  const perVertical = {};
+  for (const v of VERT_ORDER){
+    const pv = sum(openAll.filter(r=>vertGroup(r.vertical)===v),'montoUSD');
+    const qv = getCuota(año, v, [7,8,9,10,11,12], 'V');
+    perVertical[v] = {pipe:pv, cuota:qv, coverage: qv ? pv/qv : null};
+  }
+  return {pipeTotal, cuotaH2, coverage, perVertical, hasQuota: hasQuotaFor(año,'V')};
+}
+
+function computeGanadaVsPresupuesto(año, includeMD){
+  const wonOpp = STATE.oppRows.filter(r => r.año===año && r.ganada && (includeMD || !r.megaDeal));
+  const byVert = {};
+  for (const v of VERT_ORDER) byVert[v] = {ganada: sum(wonOpp.filter(r=>vertGroup(r.vertical)===v),'montoUSD'), cuota: getCuota(año,v,null,'V')};
+  const totalVert = {ganada: sum(wonOpp,'montoUSD'), cuota: getCuota(año,'ALL',null,'V')};
+
+  const wonProd = STATE.productRows.filter(r => r.año===año && r.ganada && (includeMD || !r.megaDeal));
+  const byHoriz = {}; for (const h of HORIZ_ORDER) byHoriz[h] = {ganada:0, cuota:0};
+  for (const r of wonProd) byHoriz[r.horiz].ganada += r.precioTotalUSD;
+  const qH = (STATE.quotas[año] && STATE.quotas[año].H) || {};
+  for (const [name, vals] of Object.entries(qH)){
+    const bucket = horizShort(name);
+    if (!byHoriz[bucket]) byHoriz[bucket] = {ganada:0, cuota:0};
+    byHoriz[bucket].cuota += sum12(vals);
+  }
+  const totalHoriz = {ganada: sum(wonProd,'precioTotalUSD'), cuota: Object.values(qH).reduce((s,v)=>s+sum12(v),0)};
+  return {byVert, totalVert, byHoriz, totalHoriz, hasQuotaV: hasQuotaFor(año,'V'), hasQuotaH: hasQuotaFor(año,'H')};
+}
+
+function computeKam(año, includeMD, vertical){
+  const base = STATE.oppRows.filter(r => r.año===año && (includeMD || !r.megaDeal) && (vertical==='ALL' || vertGroup(r.vertical)===vertical) && r.kam);
+  const map = new Map();
+  for (const r of base){
+    if (!map.has(r.kam)) map.set(r.kam, {kam:r.kam, ganado:0, pipeAbierto:0, nOpen:0});
+    const o = map.get(r.kam);
+    if (r.ganada) o.ganado += r.montoUSD;
+    if (r.abierto){ o.pipeAbierto += r.montoUSD; o.nOpen++; }
+  }
+  return [...map.values()].filter(o=>o.ganado>0 || o.pipeAbierto>0).sort((a,b)=>b.pipeAbierto-a.pipeAbierto);
+}
+
+function computeEtapaGrid(año, includeMD, month, vertical){
+  const inMonth = r => month==='ALL' || !month || (r.fechaCierre && (r.fechaCierre.getUTCMonth()+1)===Number(month));
+  const openAll = STATE.productRows.filter(r => r.año===año && r.abierto && (includeMD || !r.megaDeal) && inMonth(r));
+  const vertsShown = vertical==='ALL' ? VERT_ORDER : [vertical];
+  const groups = {Comprometida: r=>r.estatus==='Comprometida', Probable: r=>r.estatus==='Probable', Indeterminada: r=>r.estatus==='Indeterminada'};
+  const result = {};
+  for (const [label, fn] of Object.entries(groups)){
+    const rowsG = openAll.filter(fn).filter(r=>vertsShown.includes(vertGroup(r.vertical)));
+    const grid = {};
+    for (const v of vertsShown){ grid[v] = {}; for (const h of HORIZ_ORDER) grid[v][h] = 0; }
+    for (const r of rowsG) grid[vertGroup(r.vertical)][r.horiz] += r.precioTotalUSD;
+    result[label] = {grid, total: sum(rowsG,'precioTotalUSD')};
+  }
+  return {data: result, vertsShown, horizontals: HORIZ_ORDER};
+}
+
+function computeRanking(año, includeMD, vertical, field){
+  const openProd = STATE.productRows.filter(r => r.año===año && r.abierto && (includeMD || !r.megaDeal) && (vertical==='ALL' || vertGroup(r.vertical)===vertical));
+  const map = new Map();
+  for (const r of openProd) map.set(r[field], (map.get(r[field])||0) + r.precioTotalUSD);
+  return [...map.entries()].map(([name,pipe])=>({name,pipe})).sort((a,b)=>b.pipe-a.pipe);
+}
+
+function computeRiesgo(año, includeMD, vertical){
+  const openOpp = STATE.oppRows.filter(r => r.año===año && r.abierto && (includeMD || !r.megaDeal) && (vertical==='ALL' || vertGroup(r.vertical)===vertical));
+  const durs = openOpp.map(r=>r.duracionEtapa).sort((a,b)=>a-b);
+  const median = durs.length ? durs[Math.floor(durs.length/2)] : 0;
+  const threshold = Math.max(60, Math.round(median*2/10)*10);
+  const snap = STATE.snapshotDate || new Date();
+  const list = openOpp.map(r => ({...r,
+    vencida: r.fechaCierre ? r.fechaCierre < snap : false,
+    estancada: r.duracionEtapa >= threshold
+  })).filter(r=>r.vencida || r.estancada).sort((a,b)=>b.montoUSD-a.montoUSD);
+  return {list, threshold};
+}
+
+/* ============================================================
+   COMPONENTES DE RENDER
+============================================================ */
+function kpiCardHTML({label, value, sub, subClass, pct}){
+  return `<div class="kpi-card">
+    <div class="label">${label}</div>
+    <div class="value mono">${value}</div>
+    ${sub ? `<div class="sub ${subClass||''}">${sub}</div>` : ''}
+    ${pct != null ? `<div class="bar-track"><div class="bar-fill" style="width:${Math.min(100,Math.max(0,pct*100))}%"></div></div>` : ''}
+  </div>`;
+}
+
+const valueLabelsPlugin = {
+  id: 'valueLabels',
+  afterDatasetsDraw(chart){
+    const {ctx} = chart;
+    chart.data.datasets.forEach((ds, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (meta.hidden) return;
+      meta.data.forEach((bar, idx) => {
+        const val = ds.data[idx];
+        if (val == null || val === 0) return;
+        ctx.save();
+        ctx.fillStyle = '#3A4150';
+        ctx.font = "600 9.5px 'IBM Plex Mono'";
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('$'+Number(val).toFixed(1), bar.x, bar.y - 3);
+        ctx.restore();
+      });
+    });
+  }
+};
+
+function chartBaseOptions({extraTopPad=8, suggestedMax=null}={}){
+  return {
+    responsive:true,
+    maintainAspectRatio:false,
+    layout:{ padding:{top:extraTopPad} },
+    interaction:{mode:'index', intersect:false},
+    plugins:{
+      legend:{ labels:{color:'#5B6472', font:{family:'IBM Plex Mono', size:11}, boxWidth:10, usePointStyle:true, pointStyle:'rectRounded'} },
+      tooltip:{ backgroundColor:'#1F242C', borderColor:'#333B47', borderWidth:1, titleColor:'#FFFFFF', bodyColor:'#FFFFFF', titleFont:{family:'IBM Plex Mono'}, bodyFont:{family:'IBM Plex Mono'},
+        callbacks:{ label: (c) => ` ${c.dataset.label}: $${c.formattedValue}M` } }
+    },
+    scales:{
+      x:{ grid:{color:'rgba(16,24,40,0.06)'}, ticks:{color:'#5B6472', font:{family:'IBM Plex Mono', size:11}} },
+      y:{ suggestedMax, grid:{color:'rgba(16,24,40,0.07)'}, ticks:{color:'#5B6472', font:{family:'IBM Plex Mono', size:11}}, title:{display:true, text:'USD M', color:'#5B6472'} }
+    }
+  };
+}
+
+function drawGauge(coverage){
+  const svg = document.getElementById('gaugeSvg');
+  const cx=150, cy=150, r=110, maxVal=5;
+  const valToAngle = (v) => Math.PI - Math.min(v,maxVal)/maxVal*Math.PI;
+  const polar = (cx,cy,r,ang) => [cx + r*Math.cos(ang), cy - r*Math.sin(ang)];
+  function arcPath(r1, a0, a1){
+    const [x0,y0] = polar(cx,cy,r1,a0), [x1,y1] = polar(cx,cy,r1,a1);
+    const large = Math.abs(a1-a0) > Math.PI ? 1 : 0;
+    return `M ${x0} ${y0} A ${r1} ${r1} 0 ${large} ${a0>a1?1:0} ${x1} ${y1}`;
+  }
+  let html = '';
+  const seg = [[0,3,'#E14C3D'],[3,4,'#C4820A'],[4,5,'#1D9A63']];
+  for (const [a,b,col] of seg) html += `<path d="${arcPath(r, valToAngle(a), valToAngle(b))}" stroke="${col}" stroke-width="16" fill="none" opacity="0.85"/>`;
+  [0,1,2,3,4,5].forEach(v=>{
+    const [tx,ty] = polar(cx,cy,r+26,valToAngle(v));
+    html += `<text x="${tx}" y="${ty}" fill="#5B6472" font-size="10" font-family="IBM Plex Mono" text-anchor="middle" dominant-baseline="middle">${v}x</text>`;
+  });
+  if (coverage != null){
+    const ang = valToAngle(coverage);
+    const [nx,ny] = polar(cx,cy,r-24,ang);
+    html += `<line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="#12151B" stroke-width="3" stroke-linecap="round"/>`;
+    html += `<circle cx="${cx}" cy="${cy}" r="6" fill="#12151B"/>`;
+  }
+  svg.innerHTML = html;
+}
+
+function hexToRgb(hex){ const h = hex.replace('#',''); return [0,2,4].map(i => parseInt(h.substr(i,2),16)); }
+function heatCell(value, maxVal, rgb, extraCss){
+  extraCss = extraCss || '';
+  if (!value || value <= 0) return `style="color:var(--text-faint); opacity:0.5; font-weight:400; ${extraCss}"`;
+  return `style="color:rgb(${rgb[0]},${rgb[1]},${rgb[2]}); font-weight:700; ${extraCss}"`;
+}
+
+/* ============================================================
+   RENDER — Corte Mensual
+============================================================ */
+function renderMonth(){
+  const d = computeMonth(STATE.año, STATE.months, STATE.includeMD, STATE.vertical);
+  const pctGanada = d.cuota ? d.ganada/d.cuota : null;
+  const pctForecast = d.cuota ? d.forecast/d.cuota : null;
+  const sortedMonths = STATE.months ? [...STATE.months].sort((a,b)=>a-b) : null;
+  const mLabel = sortedMonths ? sortedMonths.map(m=>MESES[m-1]).join(', ') : 'Año completo';
+  const vLabel = STATE.vertical==='ALL' ? '' : ` — ${VERT_SHORT[STATE.vertical]}`;
+
+  document.getElementById('monthKpis').innerHTML = [
+    kpiCardHTML({label:'Cuota · '+mLabel+vLabel, value: fmtM(d.cuota), sub: d.hasQuota ? 'Presupuesto del período' : 'Sin meta para este año en la hoja Cuotas'}),
+    kpiCardHTML({label:'Ganada', value: fmtM(d.ganada), sub: d.cuota ? fmtPct(pctGanada)+' de la cuota' : '', pct: pctGanada}),
+    kpiCardHTML({label:'Comprometida', value: fmtM(d.comprometida), sub:'Abierta, ya en el Forecast'}),
+    kpiCardHTML({label:'Forecast (Ganada + Comprometida)', value: fmtM(d.forecast), sub: d.cuota ? fmtPct(pctForecast)+' de la cuota' : '', pct: pctForecast}),
+    kpiCardHTML({label:'Pipe Abierto', value: fmtM(d.pipeAbierto), sub:'Comprometida + Probable + Indeterminada'}),
+    kpiCardHTML({label:'Gap vs. Cuota', value: fmtM(d.gap), sub: d.cuota ? fmtPct(d.gap/d.cuota)+' de la cuota' : '', subClass: d.gap<0 ? 'bad':'good'})
+  ].join('');
+
+  document.getElementById('monthChartTitle').textContent = `Cuota vs. Ganada vs. Forecast por Vertical — ${mLabel} (USD M)`;
+  renderMonthChart(d);
+
+  document.getElementById('monthPctStrip').innerHTML = VERT_ORDER.map(v=>{
+    const p = d.byVertical[v].pctCumplido;
+    const color = p==null ? 'var(--text-faint)' : p>=1 ? 'var(--good)' : p>=0.5 ? 'var(--warn)' : 'var(--bad)';
+    return `<div class="pct-chip">
+      <div class="pc-label">% Cumplido ${VERT_SHORT[v]}</div>
+      <div class="pc-value mono" style="color:${color}">${p!=null ? fmtPct(p) : '—'}</div>
+      <div class="pc-formula">(G+C) / Cuota</div>
+    </div>`;
+  }).join('');
+}
+
+function renderMonthChart(d){
+  const ctx = document.getElementById('monthVerticalChart');
+  const labels = VERT_ORDER.map(v=>VERT_SHORT[v]);
+  const datasets = [
+    {label:'Cuota', backgroundColor:'#98A2B3', data: VERT_ORDER.map(v=>d.byVertical[v].cuota)},
+    {label:'Ganada', backgroundColor:'#1D9A63', data: VERT_ORDER.map(v=>d.byVertical[v].ganada)},
+    {label:'Forecast (G+C)', backgroundColor:'#1F5DF5', data: VERT_ORDER.map(v=>d.byVertical[v].forecast)}
+  ];
+  if (STATE.charts.month) STATE.charts.month.destroy();
+  const maxVal = Math.max(1, ...datasets.flatMap(ds=>ds.data));
+  STATE.charts.month = new Chart(ctx, {
+    type:'bar', data:{labels, datasets}, plugins:[valueLabelsPlugin],
+    options: chartBaseOptions({extraTopPad:22, suggestedMax: maxVal*1.18})
+  });
+}
+
+/* ---------- Cobertura ---------- */
+function renderCoverage(){
+  const c = computeCoverage(STATE.año, STATE.includeMD);
+  const cv = STATE.vertical;
+  const shown = cv==='ALL' ? {pipeTotal:c.pipeTotal, cuotaH2:c.cuotaH2, coverage:c.coverage} : {pipeTotal:c.perVertical[cv].pipe, cuotaH2:c.perVertical[cv].cuota, coverage:c.perVertical[cv].coverage};
+  document.getElementById('gaugeValue').textContent = shown.coverage!=null ? shown.coverage.toFixed(2)+'x' : '—';
+  document.getElementById('gaugeCaption').innerHTML = `Pipe abierto H2 <b style="color:#12151B">${fmtM(shown.pipeTotal)}</b> · Cuota H2 <b style="color:#12151B">${fmtM(shown.cuotaH2)}</b>${cv!=='ALL' ? ` · <b style="color:#12151B">${VERT_SHORT[cv]}</b>` : ''}`;
+  drawGauge(shown.coverage);
+
+  const flagEl = document.getElementById('gaugeFlag');
+  if (shown.coverage == null){ flagEl.className='gauge-flag'; flagEl.textContent = c.hasQuota ? '' : 'Sin cuota para este año en la hoja Cuotas'; }
+  else if (shown.coverage < 3){ flagEl.className='gauge-flag bad'; flagEl.textContent = `Por debajo del piso mínimo · faltan ${fmtM(shown.cuotaH2*3 - shown.pipeTotal)}`; }
+  else if (shown.coverage < 4){ flagEl.className='gauge-flag warn'; flagEl.textContent = `Sobre el piso, bajo la meta · faltan ${fmtM(shown.cuotaH2*4 - shown.pipeTotal)} para 4x`; }
+  else { flagEl.className='gauge-flag good'; flagEl.textContent = 'Cobertura saludable'; }
+
+  document.getElementById('vcovList').innerHTML = VERT_ORDER.map(v=>{
+    const pv = c.perVertical[v];
+    const pct = pv.coverage != null ? Math.min(100, pv.coverage/5*100) : 0;
+    const color = pv.coverage==null ? '#9AA2B1' : pv.coverage<3 ? 'var(--bad)' : pv.coverage<4 ? 'var(--warn)' : 'var(--good)';
+    return `<div class="vcov-row-wrap"><div class="vcov-row">
+      <div class="vcov-name">${VERT_SHORT[v]}</div>
+      <div class="vcov-track">
+        <div class="vcov-fill" style="width:${pct}%; background:${color}"></div>
+        <div class="vcov-marker" style="left:${3/5*100}%"></div>
+        <div class="vcov-marker" style="left:${4/5*100}%"></div>
+      </div>
+      <div class="vcov-val mono">${pv.coverage!=null ? pv.coverage.toFixed(2)+'x' : '—'}</div>
+    </div></div>`;
+  }).join('');
+}
+
+/* ---------- Presupuesto ---------- */
+function presupuestoRowHTML(name, ganada, cuota){
+  const gCol = ganada>0 ? 'var(--good)' : 'var(--text-faint)';
+  const cCol = cuota>0 ? 'var(--warn)' : 'var(--text-faint)';
+  const pct = cuota ? ganada/cuota : null;
+  return `<tr><td>${name}</td><td style="text-align:left; white-space:nowrap;">
+    <span style="font-weight:700; color:${gCol};">${fmtM(ganada)}</span><span style="color:var(--text-faint)"> de </span><span style="font-weight:600; color:${cCol};">${fmtM(cuota)}</span>
+    ${cuota>0 ? `<div style="font-size:9.5px; color:var(--text-faint); margin-top:1px;">${fmtPct(pct)}</div>` : ''}
+  </td></tr>`;
+}
+function renderPresupuesto(){
+  const d = computeGanadaVsPresupuesto(STATE.año, STATE.includeMD);
+  const verts = STATE.vertical==='ALL' ? VERT_ORDER : [STATE.vertical];
+  document.getElementById('presupuestoTitle').textContent = `Ganada vs. Presupuesto — Año ${STATE.año}`;
+
+  const vertHead = `<tr><th></th><th style="text-align:left;">Ganada de Cuota</th></tr>`;
+  const vertBody = verts.map(v=>presupuestoRowHTML(VERT_SHORT[v], d.byVert[v].ganada, d.byVert[v].cuota)).join('');
+  const vertTotalG = verts.reduce((s,v)=>s+d.byVert[v].ganada,0);
+  const vertTotalC = verts.reduce((s,v)=>s+d.byVert[v].cuota,0);
+  document.getElementById('presupuestoVertTable').innerHTML = vertHead + vertBody + `<tr class="total-row">${presupuestoRowHTML('Total', vertTotalG, vertTotalC).slice(4)}`;
+
+  const horizHead = `<tr><th></th><th style="text-align:left;">Ganada de Cuota</th></tr>`;
+  const horizBody = HORIZ_ORDER.map(h=>presupuestoRowHTML(h, d.byHoriz[h].ganada, d.byHoriz[h].cuota)).join('');
+  document.getElementById('presupuestoHorizTable').innerHTML = horizHead + horizBody + `<tr class="total-row">${presupuestoRowHTML('Total', d.totalHoriz.ganada, d.totalHoriz.cuota).slice(4)}`;
+}
+
+/* ---------- KAM ---------- */
+function rankRowsHTML(items, valueKey, fmt, extraLabel){
+  if (!items.length) return `<div style="color:var(--text-faint); font-size:12.5px; padding:8px 0;">Sin datos para este filtro.</div>`;
+  const maxVal = Math.max(...items.map(i=>i[valueKey]));
+  return items.map(i=>`<div class="rank-row">
+    <div class="rank-name" title="${i.name}">${i.name}</div>
+    <div class="rank-track"><div class="rank-fill" style="width:${maxVal? (i[valueKey]/maxVal*100):0}%"></div></div>
+    <div class="rank-val mono">${fmt(i[valueKey])}</div>
+  </div>`).join('');
+}
+function renderKam(){
+  const rows = computeKam(STATE.año, STATE.includeMD, STATE.vertical).slice(0,20);
+  if (!rows.length){ document.getElementById('kamList').innerHTML = `<div style="color:var(--text-faint); font-size:12.5px;">Sin datos para este filtro.</div>`; return; }
+  const maxVal = Math.max(...rows.map(r=>r.pipeAbierto));
+  const body = rows.map(r=>`<div class="kam-row">
+    <div class="kam-row-top">
+      <div class="kam-row-name" title="${r.kam}">${r.kam}</div>
+      <div class="kam-row-value mono">${fmtM(r.pipeAbierto)}</div>
+    </div>
+    <div class="kam-row-meta">Ganado <b>${fmtM(r.ganado)}</b> · ${r.nOpen} oportunidad${r.nOpen===1?'':'es'} abierta${r.nOpen===1?'':'s'}</div>
+    <div class="kam-row-track"><div class="kam-row-fill" style="width:${maxVal? (r.pipeAbierto/maxVal*100):0}%"></div></div>
+  </div>`).join('');
+  document.getElementById('kamList').innerHTML = body +
+    `<div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border-soft); font-size:11px; color:var(--text-faint);">Barra = Pipe Abierto hoy (año seleccionado) · "gan." = Ganado en el año · "op." = # oportunidades abiertas. ${rows.length} KAM con actividad en el filtro actual.</div>`;
+}
+
+/* ---------- Etapa grid ---------- */
+function renderEtapaGrid(){
+  const data = computeEtapaGrid(STATE.año, STATE.includeMD, STATE.etapaMonth, STATE.vertical);
+  const tagColor = {Comprometida:'#1D9A63', Probable:'#8B5FBF', Indeterminada:'#C4820A'};
+  const order = ['Comprometida','Probable','Indeterminada'];
+  const {vertsShown, horizontals} = data;
+
+  const totalAll = order.reduce((s,l)=>s+data.data[l].total,0);
+  document.getElementById('etapaTotals').innerHTML = `<div class="etapa-total-chip">
+    <div class="etc-label">Total ${STATE.año} · ${STATE.includeMD ? 'Con Mega Deals' : 'Sin Mega Deals'}</div>
+    <div class="etc-value mono">${fmtM(totalAll)}</div>
+  </div>`;
+
+  document.getElementById('etapaGrid').innerHTML = order.map(label=>{
+    const g = data.data[label];
+    const color = tagColor[label];
+    const rgb = hexToRgb(color);
+    const maxVal = Math.max(0.0001, ...vertsShown.flatMap(v=>horizontals.map(h=>g.grid[v][h])));
+    const thead = `<tr><th></th>${horizontals.map(h=>`<th>${h}</th>`).join('')}<th>Total</th></tr>`;
+    const body = vertsShown.map(v=>{
+      const rowTotal = horizontals.reduce((s,h)=>s+g.grid[v][h],0);
+      return `<tr><td>${VERT_SHORT[v]}</td>${horizontals.map(h=>`<td ${heatCell(g.grid[v][h],maxVal,rgb)}>${g.grid[v][h].toFixed(2)}</td>`).join('')}<td ${heatCell(rowTotal,maxVal,rgb)}>${rowTotal.toFixed(2)}</td></tr>`;
+    }).join('');
+    return `<div class="panel etapa-card">
+      <div class="etapa-head"><span class="etapa-tag" style="color:${color}; background:${color}22;">${label}</span><span class="etapa-total mono" style="color:${color}">${fmtM(g.total)}</span></div>
+      <div style="overflow-x:auto;"><table class="heatmap-table">${thead}${body}</table></div>
+    </div>`;
+  }).join('');
+
+  const combined = {}; for (const v of vertsShown){ combined[v]={}; for (const h of horizontals) combined[v][h] = order.reduce((s,l)=>s+data.data[l].grid[v][h],0); }
+  const accentRgb = hexToRgb('#1F5DF5');
+  const maxValC = Math.max(0.0001, ...vertsShown.flatMap(v=>horizontals.map(h=>combined[v][h])));
+  const theadT = `<tr><th></th>${horizontals.map(h=>`<th>${h}</th>`).join('')}<th>Total</th></tr>`;
+  const bodyT = vertsShown.map(v=>{
+    const rowTotal = horizontals.reduce((s,h)=>s+combined[v][h],0);
+    return `<tr><td>${VERT_SHORT[v]}</td>${horizontals.map(h=>`<td ${heatCell(combined[v][h],maxValC,accentRgb)}>${combined[v][h].toFixed(2)}</td>`).join('')}<td ${heatCell(rowTotal,maxValC,accentRgb)}>${rowTotal.toFixed(2)}</td></tr>`;
+  }).join('');
+  const colTotalsT = horizontals.map(h=>vertsShown.reduce((s,v)=>s+combined[v][h],0));
+  const grandTotalT = colTotalsT.reduce((a,b)=>a+b,0);
+  const totalRowT = `<tr class="total-row"><td>Total</td>${colTotalsT.map(t=>`<td ${heatCell(t,maxValC,accentRgb)}>${t.toFixed(2)}</td>`).join('')}<td ${heatCell(grandTotalT,maxValC,accentRgb)}>${grandTotalT.toFixed(2)}</td></tr>`;
+  document.getElementById('etapaTotalsPanel').innerHTML = `
+    <div class="etapa-head"><span class="etapa-tag" style="color:#1F5DF5; background:#1F5DF522;">Total (Comprometida + Probable + Indeterminada)</span><span class="etapa-total mono" style="color:#1F5DF5">${fmtM(grandTotalT)}</span></div>
+    <div style="overflow-x:auto;"><table class="heatmap-table">${theadT}${bodyT}${totalRowT}</table></div>`;
+}
+
+/* ---------- Productos ---------- */
+function renderProductos(){
+  const familias = computeRanking(STATE.año, STATE.includeMD, STATE.vertical, 'familia').slice(0,10);
+  const productos = computeRanking(STATE.año, STATE.includeMD, STATE.vertical, 'producto').slice(0,12);
+  document.getElementById('familiaRank').innerHTML = rankRowsHTML(familias,'pipe', fmtM);
+  document.getElementById('productoRank').innerHTML = rankRowsHTML(productos,'pipe', fmtM);
+}
+
+/* ---------- Riesgo ---------- */
+function renderRiesgo(){
+  const {list, threshold} = computeRiesgo(STATE.año, STATE.includeMD, STATE.vertical);
+  document.getElementById('riesgoNote').textContent = `Estancada = ${threshold}+ días en la etapa actual (2x la mediana del pipe abierto).`;
+  const el = document.getElementById('riesgoTable');
+  if (!list.length){
+    el.innerHTML = `<tr><td style="color:var(--text-faint); font-style:italic; border:none;">Sin oportunidades marcadas en riesgo para este filtro.</td></tr>`;
+    return;
+  }
+  const thead = `<tr><th style="text-align:left;">Cuenta</th><th style="text-align:left;">KAM</th><th style="text-align:left;">Etapa</th><th>Monto</th><th>Días en etapa</th><th>Fecha Cierre</th><th style="text-align:left;">Señales</th></tr>`;
+  const body = list.slice(0,60).map(r=>`<tr>
+    <td style="color:var(--text); font-weight:500;">${r.cuenta}</td>
+    <td>${r.kam || '—'}</td>
+    <td>${r.etapa}</td>
+    <td>${fmtKM(r.montoUSD)}</td>
+    <td>${r.duracionEtapa}</td>
+    <td>${fmtDateHuman(r.fechaCierre)}</td>
+    <td style="text-align:left;">${r.vencida?'<span class="risk-badge vencida">VENCIDA</span>':''}${r.estancada?'<span class="risk-badge estancada">ESTANCADA</span>':''}</td>
+  </tr>`).join('');
+  el.innerHTML = thead + body;
+  if (list.length>60) el.innerHTML += `<tr><td colspan="7" style="text-align:center; color:var(--text-faint); font-style:italic;">+ ${list.length-60} oportunidades más — usa los filtros de arriba para acotar.</td></tr>`;
+}
+
+/* ============================================================
+   CONTROLES
+============================================================ */
+function renderVerticalTabs(){
+  const el = document.getElementById('verticalTabs');
+  const opts = [['ALL','Total'], ...VERT_ORDER.map(v=>[v, VERT_SHORT[v]])];
+  el.innerHTML = opts.map(([val,label])=>`<button data-val="${val}" class="${STATE.vertical===val?'active':''}">${label}</button>`).join('');
+  el.onclick = (e) => { const btn = e.target.closest('button'); if (!btn) return; STATE.vertical = btn.dataset.val; renderVerticalTabs(); renderAll(); };
+}
+function renderYearSelect(){
+  const el = document.getElementById('yearSelect');
+  el.innerHTML = STATE.years.map(y=>`<option value="${y}" ${y===STATE.año?'selected':''}>${y}</option>`).join('');
+  el.onchange = () => { STATE.año = Number(el.value); STATE.months = null; renderMonthPills(); renderAll(); };
+}
+function renderMonthPills(){
+  const el = document.getElementById('monthPills');
+  el.innerHTML = MESES.map((m,i)=>{
+    const num = i+1;
+    const active = STATE.months && STATE.months.includes(num);
+    return `<button data-month="${num}" class="${active?'active':''}">${m}</button>`;
+  }).join('');
+  el.onclick = (e) => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    const num = Number(btn.dataset.month);
+    const cur = STATE.months || [];
+    let next = cur.includes(num) ? cur.filter(m=>m!==num) : [...cur, num];
+    STATE.months = next.length ? next : null;
+    renderMonthPills(); renderMonth();
+  };
+  document.getElementById('monthSelectAllBtn').onclick = () => { STATE.months = null; renderMonthPills(); renderMonth(); };
+  document.getElementById('monthClearBtn').onclick = () => { STATE.months = null; renderMonthPills(); renderMonth(); };
+}
+function renderEtapaMonthSelect(){
+  const el = document.getElementById('etapaMonthSelect');
+  el.innerHTML = `<option value="ALL">Todos los meses</option>` + MESES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+  el.value = STATE.etapaMonth;
+  el.onchange = () => { STATE.etapaMonth = el.value; renderEtapaGrid(); };
+}
+function wireTopControls(){
+  const mdEl = document.getElementById('mdToggle');
+  mdEl.onclick = (e) => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    STATE.includeMD = btn.dataset.val === 'con';
+    [...mdEl.children].forEach(b=>b.classList.toggle('active', b===btn));
+    renderAll();
+  };
+  document.getElementById('reloadBtn').onclick = resetToUpload;
+}
+
+function renderAll(){
+  renderMonth();
+  renderCoverage();
+  renderPresupuesto();
+  renderKam();
+  renderEtapaGrid();
+  renderProductos();
+  renderRiesgo();
+}
+
+/* ============================================================
+   CARGA DE ARCHIVO
+============================================================ */
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const dropError = document.getElementById('dropError');
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+function handleFile(file){
+  dropError.classList.add('hidden');
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+      loadWorkbook(wb);
+    }catch(err){
+      console.error(err);
+      dropError.textContent = 'No pude leer este archivo: ' + err.message;
+      dropError.classList.remove('hidden');
+    }
+  };
+  reader.onerror = () => { dropError.textContent = 'No pude leer el archivo.'; dropError.classList.remove('hidden'); };
+  reader.readAsArrayBuffer(file);
+}
+
+function loadWorkbook(wb){
+  try{
+    const meta = parseMeta(wb);
+    const productRows = parsePipe(wb);
+    const oppRows = dedupeOpps(productRows);
+    const quotas = parseCuotas(wb);
+
+    STATE.productRows = productRows;
+    STATE.oppRows = oppRows;
+    STATE.quotas = quotas;
+    STATE.snapshotDate = meta.snapshotDate;
+    STATE.generatedBy = meta.generatedBy;
+    STATE.reportFilters = meta.filters;
+    STATE.years = [...new Set(oppRows.map(r=>r.año).filter(Boolean))].sort();
+    STATE.año = STATE.years.includes(2026) ? 2026 : STATE.years[STATE.years.length-1];
+    STATE.months = null;
+    STATE.vertical = 'ALL';
+    STATE.etapaMonth = 'ALL';
+    STATE.includeMD = true;
+
+    document.getElementById('topbarSub').textContent = `Pipe con Productos · Sales Operations · ${oppRows.length.toLocaleString('es-MX')} oportunidades / ${productRows.length.toLocaleString('es-MX')} líneas de producto`;
+    document.getElementById('footerCorte').textContent = `Corte: ${STATE.snapshotDate ? fmtDateHuman(STATE.snapshotDate) : 'fecha no detectada'}${STATE.generatedBy ? ' · Generado por '+STATE.generatedBy : ''}`;
+    document.getElementById('footerFiltros').innerHTML = STATE.reportFilters.length
+      ? `<b>Filtros aplicados en el reporte de origen (Salesforce):</b><br>${STATE.reportFilters.map(f=>`· ${f}`).join('<br>')}`
+      : '';
+
+    document.getElementById('mdToggle').querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.val==='con'));
+
+    renderVerticalTabs();
+    renderYearSelect();
+    renderMonthPills();
+    renderEtapaMonthSelect();
+    wireTopControls();
+    renderAll();
+
+    document.getElementById('dropScreen').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+  }catch(err){
+    console.error(err);
+    dropError.textContent = err.message || 'No pude procesar este archivo.';
+    dropError.classList.remove('hidden');
+  }
+}
+
+function resetToUpload(){
+  Object.values(STATE.charts).forEach(c=>c && c.destroy());
+  STATE.charts = {};
+  document.getElementById('dashboard').classList.add('hidden');
+  document.getElementById('dropScreen').classList.remove('hidden');
+  document.getElementById('topbarSub').textContent = 'Pipe con Productos · Sales Operations';
+  fileInput.value = '';
+}
+</script>
+</body>
+</html>
