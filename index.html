@@ -321,6 +321,7 @@
     <div class="drop-assumptions">
       <b>Criterios aplicados:</b> Ganada = Etapa "Cerrada Ganada" · Forecast = Ganada + Comprometida · Pipe Abierto = Comprometida + Probable + Indeterminada (sólo oportunidades no cerradas).
       Como este archivo es un corte único (no trae Best Case/Upside ni historial semanal), el tablero no incluye Best Case ni Movimiento Semanal, y la Cuota por KAM no está disponible (la hoja "Cuotas" sólo trae metas por Vertical y por Línea de Servicio).
+      Solo se incluye Tipo de registro de la oportunidad = Oportunidad Estándar u Oportunidad Fast Track (se excluyen las variantes "Secundaria", venta indirecta).
     </div>
   </div>
 
@@ -547,6 +548,10 @@ function horizShort(raw){
 
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
+// Único filtro aplicado a nivel de fuente: todos los análisis del tablero excluyen cualquier
+// otro "Tipo de registro de la oportunidad" (p. ej. las variantes "Secundaria", venta indirecta).
+const TIPO_REGISTRO_PERMITIDO = new Set(['Oportunidad Estándar', 'Oportunidad Fast Track']);
+
 const STATE = {
   productRows: [],   // una fila por línea de producto (todas)
   oppRows: [],        // una fila por oportunidad única (dedupe por ID Oportunidad)
@@ -635,11 +640,11 @@ function parseMeta(wb){
     let inFilters = false;
     for (let r=0; r<Math.min(aoa.length, 20); r++){
       const v = (aoa[r]||[]).find(x=>x!=null);
-      if (v == null) continue;
+      if (v == null){ if (inFilters) break; continue; } // fila en blanco = fin de la lista de filtros
       const s = String(v).trim();
       if (s === 'Filtrado por'){ inFilters = true; continue; }
       if (inFilters){
-        if (s === '' ) break;
+        if (s === '') break;
         filters.push(s);
       }
     }
@@ -660,10 +665,15 @@ function parsePipe(wb){
   const get = (row,key)=> col[key]!=null ? row[col[key]] : null;
 
   const rows = [];
+  let excludedTipoRegistro = 0;
   for (let r=hdr.r+1; r<aoa.length; r++){
     const row = aoa[r]; if (!row) continue;
     const id = get(row,'ID Oportunidad');
     if (id == null || id === '') continue;
+    // Solo Oportunidad Estándar y Oportunidad Fast Track — excluye las variantes "Secundaria"
+    // (venta indirecta, canal distinto) de todos los análisis del tablero.
+    const tipoRegistro = String(get(row,'Tipo de registro de la oportunidad') || '').trim();
+    if (!TIPO_REGISTRO_PERMITIDO.has(tipoRegistro)){ excludedTipoRegistro++; continue; }
     const etapa = String(get(row,'Etapa') || '').trim();
     const fechaCierre = parseDMY(get(row,'Fecha Real de Cierre'));
     const fechaCreacion = parseDMY(get(row,'Fecha de creación'));
@@ -690,7 +700,8 @@ function parsePipe(wb){
       año: fechaCierre ? fechaCierre.getUTCFullYear() : null
     });
   }
-  if (!rows.length) throw new Error('La hoja de Pipe no tiene filas de datos debajo del encabezado.');
+  if (!rows.length) throw new Error('La hoja de Pipe no tiene filas de datos debajo del encabezado (o ninguna fila es Oportunidad Estándar / Fast Track).');
+  rows.excludedTipoRegistro = excludedTipoRegistro;
   return rows;
 }
 
@@ -1351,9 +1362,12 @@ function loadWorkbook(wb){
 
     document.getElementById('topbarSub').textContent = `Pipe con Productos · Sales Operations · ${oppRows.length.toLocaleString('es-MX')} oportunidades / ${productRows.length.toLocaleString('es-MX')} líneas de producto`;
     document.getElementById('footerCorte').textContent = `Corte: ${STATE.snapshotDate ? fmtDateHuman(STATE.snapshotDate) : 'fecha no detectada'}${STATE.generatedBy ? ' · Generado por '+STATE.generatedBy : ''}`;
-    document.getElementById('footerFiltros').innerHTML = STATE.reportFilters.length
-      ? `<b>Filtros aplicados en el reporte de origen (Salesforce):</b><br>${STATE.reportFilters.map(f=>`· ${f}`).join('<br>')}`
+    const tipoNote = productRows.excludedTipoRegistro
+      ? `<br><br><b>Filtro aplicado por el tablero:</b><br>· Tipo de registro de la oportunidad = Oportunidad Estándar u Oportunidad Fast Track (se excluyeron ${productRows.excludedTipoRegistro.toLocaleString('es-MX')} líneas de otros tipos, p. ej. "Secundaria")`
       : '';
+    document.getElementById('footerFiltros').innerHTML = (STATE.reportFilters.length
+      ? `<b>Filtros aplicados en el reporte de origen (Salesforce):</b><br>${STATE.reportFilters.map(f=>`· ${f}`).join('<br>')}`
+      : '') + tipoNote;
 
     document.getElementById('mdToggle').querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.val==='con'));
 
