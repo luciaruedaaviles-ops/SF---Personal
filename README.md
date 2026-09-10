@@ -18,6 +18,14 @@ el reporte de Salesforce **"Pipe con productos FCST"** (p. ej. `FCST-2026-09-02-
 4. Para cargar el corte de otra semana, usa el botón **"Cargar nueva semana"** — no hace falta
    recargar la página.
 
+## Filtro de entrada
+
+Todos los análisis excluyen cualquier fila cuyo **`Tipo de registro de la oportunidad`** no sea
+exactamente `Oportunidad Estándar` u `Oportunidad Fast Track` — quedan fuera las variantes
+`Oportunidad Estándar Secundaria` y `Oportunidad Fast Track Secundaria` (venta indirecta). Se
+aplica una sola vez al leer el archivo, así que alcanza de forma uniforme a todas las secciones.
+El número de líneas excluidas se muestra en el pie del tablero.
+
 ## Qué calcula
 
 - **Corte Mensual**: Cuota, Ganada, Comprometida, Forecast (Ganada+Comprometida), Pipe Abierto
