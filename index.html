@@ -129,6 +129,29 @@
   .subsection-head{display:flex; align-items:center; justify-content:space-between; margin:24px 0 14px; padding-top:20px; border-top:1px solid var(--border-soft); flex-wrap:wrap; gap:10px;}
   .subsection-title{font-family:'Kumbh Sans'; font-weight:600; font-size:15.5px; color:var(--text-dim);}
 
+  /* ---------- Executive summary (banner + hero KPIs) ---------- */
+  .exec-banner{
+    background:var(--panel); border:1px solid var(--border); border-left:4px solid var(--accent);
+    border-radius:var(--radius); padding:18px 22px; margin-bottom:16px;
+    box-shadow:0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.05);
+  }
+  .exec-banner.good{border-left-color:var(--good);}
+  .exec-banner.warn{border-left-color:var(--warn);}
+  .exec-banner.bad{border-left-color:var(--bad);}
+  .exec-banner-text{font-family:'Kumbh Sans'; font-weight:500; font-size:16px; line-height:1.55; color:var(--text); text-wrap:balance;}
+  .exec-banner-text b{font-weight:700;}
+  .hero-kpi-grid{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px;}
+  @media(max-width:1100px){.hero-kpi-grid{grid-template-columns:repeat(3,minmax(0,1fr));}}
+  @media(max-width:560px){.hero-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  .hero-kpi-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px 16px 14px; min-width:0;
+    box-shadow:0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.05);
+  }
+  .hero-kpi-card .label{font-size:10.5px; color:var(--text-dim); font-weight:600; letter-spacing:0.3px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .hero-kpi-card .value{font-family:'IBM Plex Mono'; font-size:23px; font-weight:700; margin-top:8px; letter-spacing:-0.4px;}
+  .hero-kpi-card .sub{font-size:11px; color:var(--text-faint); margin-top:4px; line-height:1.4;}
+
   /* ---------- KPI cards ---------- */
   .kpi-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px;}
   @media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
@@ -314,11 +337,25 @@
       </div>
     </div>
 
+    <!-- ===== EXECUTIVE SUMMARY ===== -->
+    <div class="section" style="margin-top:30px;">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Vista Ejecutiva</div>
+          <h2 class="section-title">Resumen Ejecutivo</h2>
+        </div>
+      </div>
+      <div class="exec-banner" id="execBanner">
+        <div class="exec-banner-text" id="execBannerText"></div>
+      </div>
+      <div class="hero-kpi-grid" id="heroKpis"></div>
+    </div>
+
     <!-- ===== MONTH SUMMARY ===== -->
     <div class="section">
       <div class="section-head">
         <div>
-          <div class="section-eyebrow">Resumen Ejecutivo</div>
+          <div class="section-eyebrow">Detalle del Período</div>
           <h2 class="section-title">Corte Mensual</h2>
         </div>
       </div>
@@ -641,6 +678,7 @@ function parsePipe(wb){
       megaDeal: megaRaw === true || String(megaRaw).trim().toUpperCase() === 'TRUE' || String(megaRaw).trim().toUpperCase() === 'VERDADERO',
       producto: get(row,'Nombre del producto') || '(Sin producto)',
       familia: get(row,'Familia de productos') || '(Sin familia)',
+      margen: (() => { const m = Number(get(row,'Margen Bruto Total %')); return isFinite(m) ? m : null; })(),
       duracionEtapa: Number(get(row,'Duración de la etapa')) || 0,
       abierto,
       ganada: etapa === 'Cerrada Ganada',
@@ -819,6 +857,38 @@ function computeRiesgo(año, includeMD, vertical){
   return {list, threshold};
 }
 
+// Tasa de conversión sobre oportunidades ya decididas (Ganada vs. Perdida) — no considera el
+// pipe todavía abierto. Es la lectura ejecutiva clásica de "de lo que se cerró, cuánto gané".
+function computeWinRate(año, includeMD, vertical){
+  const base = STATE.oppRows.filter(r => r.año===año && (includeMD || !r.megaDeal) && (vertical==='ALL' || vertGroup(r.vertical)===vertical) && (r.ganada || r.etapa==='Cerrada Perdida'));
+  const won = base.filter(r=>r.ganada).length;
+  const lost = base.length - won;
+  return {won, lost, total: base.length, rate: base.length ? won/base.length : null};
+}
+
+// Margen bruto promedio de lo Ganado, ponderado por monto de cada línea de producto (no un
+// promedio simple de %) — así una línea diminuta con un margen mal capturado en Salesforce no
+// distorsiona la lectura, igual que se pondera cualquier margen a nivel de portafolio.
+function computeMargenPonderado(año, includeMD, vertical){
+  const rows = STATE.productRows.filter(r => r.año===año && r.ganada && (includeMD || !r.megaDeal) && (vertical==='ALL' || vertGroup(r.vertical)===vertical) && r.margen != null && r.precioTotalUSD > 0);
+  const w = sum(rows,'precioTotalUSD');
+  if (!w) return null;
+  const weighted = rows.reduce((s,r)=>s + r.margen*r.precioTotalUSD, 0) / w;
+  return weighted;
+}
+
+function computeExecutiveSummary(año, includeMD, vertical){
+  const month = computeMonth(año, null, includeMD, vertical);
+  const coverage = computeCoverage(año, includeMD);
+  const coverageShown = vertical==='ALL' ? coverage.coverage : coverage.perVertical[vertical].coverage;
+  const winRate = computeWinRate(año, includeMD, vertical);
+  const margen = computeMargenPonderado(año, includeMD, vertical);
+  const riesgo = computeRiesgo(año, includeMD, vertical);
+  const riesgoMonto = sum(riesgo.list,'montoUSD');
+  const pctCumplido = month.cuota ? month.forecast/month.cuota : null;
+  return {month, coverage: coverageShown, winRate, margen, riesgoCount: riesgo.list.length, riesgoMonto, pctCumplido};
+}
+
 /* ============================================================
    COMPONENTES DE RENDER
 ============================================================ */
@@ -902,6 +972,47 @@ function heatCell(value, maxVal, rgb, extraCss){
   extraCss = extraCss || '';
   if (!value || value <= 0) return `style="color:var(--text-faint); opacity:0.5; font-weight:400; ${extraCss}"`;
   return `style="color:rgb(${rgb[0]},${rgb[1]},${rgb[2]}); font-weight:700; ${extraCss}"`;
+}
+
+/* ============================================================
+   RENDER — Resumen Ejecutivo
+============================================================ */
+function renderExecutiveSummary(){
+  const s = computeExecutiveSummary(STATE.año, STATE.includeMD, STATE.vertical);
+  const vLabel = STATE.vertical==='ALL' ? '' : ` en ${VERT_SHORT[STATE.vertical]}`;
+
+  // Estado general = el peor de (cumplimiento de cuota, cobertura de pipeline) — una lectura
+  // ejecutiva no puede decir "vamos bien" si cualquiera de las dos luces está en rojo.
+  const statusOf = (v, good, warn) => v==null ? null : v>=good ? 'good' : v>=warn ? 'warn' : 'bad';
+  const cuotaStatus = statusOf(s.pctCumplido, 1, 0.7);
+  const coverageStatus = statusOf(s.coverage!=null ? s.coverage/4 : null, 1, 0.75); // relativo a la meta 4x
+  const rank = {bad:0, warn:1, good:2, null:2};
+  const overall = [cuotaStatus, coverageStatus].reduce((worst,s2)=> (rank[s2] ?? 2) < (rank[worst] ?? 2) ? s2 : worst, 'good') || 'good';
+
+  const banner = document.getElementById('execBanner');
+  banner.className = 'exec-banner ' + overall;
+  const pctTxt = s.pctCumplido!=null ? fmtPct(s.pctCumplido) : 'sin meta cargada';
+  const covTxt = s.coverage!=null ? s.coverage.toFixed(2)+'x' : 'sin meta cargada';
+  document.getElementById('execBannerText').innerHTML =
+    `El Forecast ${STATE.año}${vLabel} cubre <b>${pctTxt}</b> de la Cuota (${fmtM(s.month.forecast)} de ${fmtM(s.month.cuota)}), con una cobertura de pipeline de <b>${covTxt}</b>.
+     ${s.riesgoCount>0 ? `${s.riesgoCount} oportunidad${s.riesgoCount===1?'':'es'} abierta${s.riesgoCount===1?'':'s'} muestra${s.riesgoCount===1?'':'n'} señales de riesgo, por <b>${fmtM(s.riesgoMonto)}</b>.` : 'Sin oportunidades marcadas en riesgo en este filtro.'}`;
+
+  const winRateColor = s.winRate.rate==null ? 'var(--text-faint)' : s.winRate.rate>=0.4 ? 'var(--good)' : s.winRate.rate>=0.25 ? 'var(--warn)' : 'var(--bad)';
+  const pctColor = s.pctCumplido==null ? 'var(--text)' : s.pctCumplido>=1 ? 'var(--good)' : s.pctCumplido>=0.7 ? 'var(--warn)' : 'var(--bad)';
+  const covColor = s.coverage==null ? 'var(--text)' : s.coverage>=4 ? 'var(--good)' : s.coverage>=3 ? 'var(--warn)' : 'var(--bad)';
+
+  document.getElementById('heroKpis').innerHTML = [
+    {label:'% Cumplido Forecast', value: s.pctCumplido!=null ? fmtPct(s.pctCumplido) : '—', sub:'(Ganada+Comprometida) / Cuota', color: pctColor},
+    {label:'Forecast Total', value: fmtM(s.month.forecast), sub:'Ganada + Comprometida', color:'var(--text)'},
+    {label:'Cobertura de Pipeline', value: s.coverage!=null ? s.coverage.toFixed(2)+'x' : '—', sub:'Pipe Abierto H2 / Cuota H2', color: covColor},
+    {label:'Win Rate', value: s.winRate.rate!=null ? fmtPct(s.winRate.rate) : '—', sub:`${s.winRate.won} ganadas de ${s.winRate.total} decididas`, color: winRateColor},
+    {label:'Margen Bruto Prom.', value: s.margen!=null ? fmtPct(s.margen) : '—', sub:'Ponderado por monto · Ganada', color:'var(--text)'},
+    {label:'Pipe en Riesgo', value: fmtM(s.riesgoMonto), sub:`${s.riesgoCount} oportunidad${s.riesgoCount===1?'':'es'}`, color: s.riesgoCount>0 ? 'var(--bad)' : 'var(--text)'}
+  ].map(k=>`<div class="hero-kpi-card">
+    <div class="label">${k.label}</div>
+    <div class="value mono" style="color:${k.color}">${k.value}</div>
+    <div class="sub">${k.sub}</div>
+  </div>`).join('');
 }
 
 /* ============================================================
@@ -1163,6 +1274,7 @@ function wireTopControls(){
 }
 
 function renderAll(){
+  renderExecutiveSummary();
   renderMonth();
   renderCoverage();
   renderPresupuesto();
