@@ -107,20 +107,19 @@
     display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;
     padding:22px 0 6px;
   }
-  .seg{ display:flex; background:var(--panel); border:1px solid var(--border); border-radius:9px; padding:3px; }
+  /* Todo control de filtro (Con/Sin Mega Deals, Vertical, Año, Meses) comparte el mismo
+     lenguaje visual: chip individual con borde, mono, azul de acento cuando está activo. */
+  .seg{ display:flex; gap:6px; flex-wrap:wrap; }
   .seg button{
-    font-family:'Roboto'; font-weight:600; font-size:12.5px; color:var(--text-dim);
-    background:transparent; border:none; padding:7px 14px; border-radius:6px; cursor:pointer;
+    font-family:'IBM Plex Mono'; font-size:12px; font-weight:600; color:var(--text-dim);
+    background:var(--panel-2); border:1px solid var(--border); border-radius:7px;
+    padding:7px 12px; cursor:pointer; transition:border-color .15s;
   }
-  .seg button.active{background:var(--accent); color:#FFFFFF;}
+  .seg button.active{background:var(--accent); color:#FFFFFF; border-color:var(--accent);}
+  .seg button:hover:not(.active){border-color:var(--accent);}
   .controls-right{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
   .control-group{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
   .control-label{font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap;}
-  select{
-    font-family:'IBM Plex Mono'; font-size:12.5px; color:var(--text);
-    background:var(--panel); border:1px solid var(--border); border-radius:8px;
-    padding:8px 10px; cursor:pointer;
-  }
 
   /* ---------- Section headers ---------- */
   .section{margin-top:46px;}
@@ -244,22 +243,16 @@
   td:first-child{color:var(--text); font-family:'Roboto'; font-weight:500; font-size:11.5px;}
   tr.total-row td{color:var(--text); font-weight:600; border-top:1px solid var(--border);}
 
-  /* ---------- Tabs / pills ---------- */
-  .tabs{display:flex; gap:6px; flex-wrap:wrap;}
-  .tabs button{
-    font-family:'IBM Plex Mono'; font-size:11.5px; color:var(--text-dim);
-    background:var(--panel-2); border:1px solid var(--border); border-radius:7px;
-    padding:6px 12px; cursor:pointer;
-  }
-  .tabs button.active{color:#FFFFFF; background:var(--accent); border-color:var(--accent);}
-  .month-pills{display:flex; gap:5px; flex-wrap:wrap;}
-  .month-pills button{
+  /* ---------- Tabs / pills (mismas reglas que .seg — ver arriba) ---------- */
+  .tabs, .month-pills{display:flex; gap:6px; flex-wrap:wrap;}
+  .tabs button, .month-pills button{
     font-family:'IBM Plex Mono'; font-size:12px; font-weight:600; color:var(--text-dim);
     background:var(--panel-2); border:1px solid var(--border); border-radius:7px;
-    padding:7px 11px; cursor:pointer; min-width:44px;
+    padding:7px 12px; cursor:pointer; transition:border-color .15s;
   }
-  .month-pills button.active{color:#FFFFFF; background:var(--accent); border-color:var(--accent);}
-  .month-pills button:hover:not(.active){border-color:var(--accent);}
+  .month-pills button{min-width:44px;}
+  .tabs button.active, .month-pills button.active{color:#FFFFFF; background:var(--accent); border-color:var(--accent);}
+  .tabs button:hover:not(.active), .month-pills button:hover:not(.active){border-color:var(--accent);}
 
   /* ---------- Ranking bars (KAM / Producto) ---------- */
   .rank-row{display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid var(--border-soft);}
@@ -466,7 +459,10 @@
           <div class="section-eyebrow">Composición del Pipe</div>
           <h2 class="section-title">Pipe abierto por Estatus, Vertical y Línea de Servicio</h2>
         </div>
-        <select id="etapaMonthSelect"></select>
+      </div>
+      <div class="control-group" style="margin-bottom:14px;">
+        <span class="control-label">Mes</span>
+        <div class="month-pills" id="etapaMonthPills"></div>
       </div>
       <div class="etapa-totals" id="etapaTotals"></div>
       <div class="etapa-grid" id="etapaGrid"></div>
@@ -1422,11 +1418,16 @@ function renderMonthPills(){
   document.getElementById('monthSelectAllBtn').onclick = () => { STATE.months = null; renderMonthPills(); renderMonth(); };
   document.getElementById('monthClearBtn').onclick = () => { STATE.months = null; renderMonthPills(); renderMonth(); };
 }
-function renderEtapaMonthSelect(){
-  const el = document.getElementById('etapaMonthSelect');
-  el.innerHTML = `<option value="ALL">Todos los meses</option>` + MESES.map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
-  el.value = STATE.etapaMonth;
-  el.onchange = () => { STATE.etapaMonth = el.value; renderEtapaGrid(); };
+function renderEtapaMonthPills(){
+  const el = document.getElementById('etapaMonthPills');
+  const opts = [['ALL','Todos'], ...MESES.map((m,i)=>[String(i+1), m])];
+  el.innerHTML = opts.map(([val,label])=>`<button data-val="${val}" class="${STATE.etapaMonth===val?'active':''}">${label}</button>`).join('');
+  el.onclick = (e) => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    STATE.etapaMonth = btn.dataset.val;
+    renderEtapaMonthPills();
+    renderEtapaGrid();
+  };
 }
 function wireTopControls(){
   const mdEl = document.getElementById('mdToggle');
@@ -1518,7 +1519,7 @@ function loadWorkbook(wb){
     renderVerticalTabs();
     renderYearTabs();
     renderMonthPills();
-    renderEtapaMonthSelect();
+    renderEtapaMonthPills();
     wireTopControls();
     renderAll();
 
