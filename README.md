@@ -1,5 +1,17 @@
 # Torre de Control Comercial · Pipe con Productos
 
+Este repositorio tiene dos tableros web independientes, ambos autocontenidos (sin backend), que
+leen el mismo reporte de Salesforce **"Pipe con productos FCST"**:
+
+- **`index.html`** — Torre de Control Comercial: vista ejecutiva con KPIs, cobertura, cumplimiento
+  de presupuesto, ranking por KAM/Producto y radar de riesgo. Ver detalle más abajo.
+- **`tablero-fcst.html`** — Revisión Semanal: réplica exacta de las tablas dinámicas de la hoja
+  "TD" (+ "Secundarias" y "MegaDeals") del workbook de seguimiento semanal, pensada para revisar
+  el corte cada 8 días usando la **columna A ("Fecha de extracción")** de la hoja "Pipe con
+  productos FCST" como filtro de corte. Ver `tablero-fcst.html` — sección "Cómo usarlo" más abajo.
+
+## Torre de Control Comercial (`index.html`)
+
 Tablero web (`index.html`, autocontenido, sin backend) que replica el diseño y la lógica de
 **"Torre de Control Comercial · SONDA México"**, adaptado a la fuente de datos real disponible:
 el reporte de Salesforce **"Pipe con productos FCST"** (p. ej. `FCST-2026-09-02-10-30-41-carga.xlsx`).
@@ -79,3 +91,58 @@ plano de Salesforce no trae. Se tomaron estas decisiones, confirmadas con el usu
 Un único archivo HTML (`index.html`) con CSS y JS inline. Librerías externas cargadas por CDN:
 [SheetJS](https://sheetjs.com/) (lectura de Excel) y [Chart.js](https://www.chartjs.org/)
 (gráficos). Sin dependencias de build ni Node — es una página estática.
+
+---
+
+## Revisión Semanal (`tablero-fcst.html`)
+
+Segundo tablero, independiente del anterior: en vez de un resumen ejecutivo por KPIs, replica
+**tal cual** las tablas dinámicas que ya se revisan cada semana en el workbook de seguimiento
+(hoja "TD" con 8 tablas dinámicas, más "Secundarias" y "MegaDeals"), recalculadas en vivo desde
+las filas crudas de la hoja "Pipe con productos FCST" — no lee los valores ya cacheados de las
+tablas dinámicas del Excel (esos valores quedan "congelados" desde el último `Actualizar todo`
+en Excel; aquí siempre se recalculan con los datos más recientes del archivo).
+
+### Cómo usarlo
+
+1. Abre `tablero-fcst.html` en el navegador y sube el Excel de "Pipe con productos FCST".
+2. Si el archivo acumula varias semanas en una sola hoja, llena la **columna A** de la hoja
+   "Pipe con productos FCST" con la **fecha de extracción** de cada corte (la misma fecha para
+   todas las filas de esa semana). El tablero detecta las fechas distintas en esa columna y arma
+   una pestaña por corte — así puedes revisar el corte de hoy o volver a uno anterior cada 8 días.
+3. Si la columna A todavía está vacía (como en un export normal de Salesforce), el tablero usa
+   automáticamente la fecha de generación del reporte ("A partir de..." en el encabezado) como
+   único corte — no hace falta preparar nada para la primera semana.
+4. El selector "Año R" aplica a todas las tablas de Forecast/Pipe/Perdida (por Fecha Real de
+   Cierre), igual que en el workbook original donde cada año tiene su propio bloque de tablas.
+
+### Tablas replicadas y sus filtros
+
+Cada tarjeta muestra debajo del título los filtros exactos que aplica (igual que la tabla
+dinámica de origen). En resumen:
+
+| Tarjeta | Filas | Columnas | Filtros clave |
+|---|---|---|---|
+| Cerrada Ganada (sin Mega Deals) | Estatus | Mes R | Tipo Estándar/Fast Track · Mega Deal = No · Etapa = Cerrada Ganada |
+| Cerrada Ganada · Digital Operations | Estatus | Mes R | Igual + Delivery Vertical solo líneas "Digital Operations" |
+| Cerrada Perdida | Estatus | Mes R | Mega Deal = Todas · Etapa = Cerrada Perdida |
+| Pipe Abierto (sin Mega Deals) | Estatus | Mes R | Mega Deal = No · Etapa = Prospección/Solución/Negociación/Cierre |
+| Pipe Abierto (con Mega Deals) | Estatus | Mes R | Mega Deal = Todas · mismas etapas abiertas |
+| Pipe Abierto por Vertical | Estatus × Vertical | Mes R | Mega Deal = Todas · Delivery Vertical = Todas |
+| Creación de Oportunidades # / $ | Estatus | Día de creación | Mes/Año de creación = mes de la Fecha de extracción del corte activo |
+| Venta Secundaria — Cerrada Ganada | Unidad de Comercial | Delivery Vertical/Línea de Servicios | Tipo = Secundaria (venta indirecta) · Etapa = Cerrada Ganada |
+| Mega Deals — Detalle | — (lista por oportunidad) | — | Mega Deal = Sí, agrupado por ID de oportunidad |
+
+En todas las tablas el valor es la **suma de "Precio total (convertido)"** por línea de producto
+(sin deduplicar por oportunidad, igual que la tabla dinámica origen), salvo en "Mega Deals" donde
+sí se agrupa por oportunidad (una oportunidad puede tener varias líneas de producto) y en
+"Creación de Oportunidades #" donde el valor es un conteo de líneas.
+
+Cada tarjeta además muestra, cuando hay al menos dos fechas de extracción cargadas, la variación
+del total general contra el corte anterior — la comparación que se necesita para una revisión
+cada 8 días.
+
+### Estructura
+
+Igual que `index.html`: un único archivo HTML con CSS y JS inline, [SheetJS](https://sheetjs.com/)
+por CDN, cálculo 100% en el navegador, sin envío de datos a ningún servidor.

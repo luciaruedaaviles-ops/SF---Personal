@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revisión Semanal · Pipe con Productos FCST</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@500;600;700&family=Roboto:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#FFFFFF; --panel:#FFFFFF; --panel-2:#F2F4F8;
+    --border:#E1E5EC; --border-soft:#EDF0F5;
+    --text:#12151B; --text-dim:#5B6472; --text-faint:#9AA2B1;
+    --accent:#1F5DF5; --accent-dim:#DCE6FE; --accent-glow: rgba(31,93,245,0.08);
+    --good:#1D9A63; --warn:#C4820A; --bad:#E14C3D;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(31,93,245,0.05), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(8,145,168,0.04), transparent 55%),
+      var(--bg);
+    color:var(--text); font-family:'Roboto',Arial,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased; min-height:100vh;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  .display{font-family:'Kumbh Sans',Arial,sans-serif;}
+  a{color:var(--accent);}
+
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+    padding:14px 28px; background:rgba(255,255,255,0.9); backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--border-soft);
+  }
+  .brand-text .t1{font-family:'Kumbh Sans';font-weight:600;font-size:15px;}
+  .brand-text .t2{font-size:11px;color:var(--text-dim); margin-top:1px;}
+  .btn{
+    font-family:'Roboto'; font-weight:600; font-size:12.5px;
+    border:1px solid var(--border); background:var(--panel-2); color:var(--text);
+    padding:8px 14px; border-radius:8px; cursor:pointer; transition:border-color .15s, transform .1s;
+  }
+  .btn:hover{border-color:var(--accent);}
+  .btn:active{transform:scale(0.98);}
+
+  .wrap{max-width:1320px;margin:0 auto;padding:0 28px 80px;}
+  .hidden{display:none !important;}
+
+  .drop-screen{
+    min-height:82vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:40px 20px;
+  }
+  .drop-eyebrow{font-family:'IBM Plex Mono'; font-size:12px; letter-spacing:2px; color:var(--accent); text-transform:uppercase; margin-bottom:18px;}
+  .drop-title{font-family:'Kumbh Sans'; font-weight:600; font-size:clamp(24px,4vw,38px); max-width:720px; line-height:1.2; margin:0 0 14px; text-wrap:balance;}
+  .drop-sub{color:var(--text-dim); font-size:15px; max-width:560px; line-height:1.6; margin-bottom:30px;}
+  .dropzone{
+    width:min(560px,92vw); border:1.5px dashed var(--border); border-radius:16px;
+    padding:36px 30px; background:var(--panel); cursor:pointer; transition: border-color .15s, background .15s;
+  }
+  .dropzone:hover, .dropzone.drag{ border-color:var(--accent); background:var(--panel-2); }
+  .dropzone-title{font-weight:600; font-size:15px; margin-bottom:4px;}
+  .dropzone-sub{font-size:12.5px; color:var(--text-faint);}
+  .drop-error{margin-top:16px; color:var(--bad); font-size:13px; font-family:'IBM Plex Mono'; max-width:560px; line-height:1.5;}
+  .drop-assumptions{margin-top:32px; max-width:680px; text-align:left; font-size:11.5px; color:var(--text-faint); line-height:1.65; padding:14px 18px; border:1px solid var(--border-soft); border-radius:10px; background:var(--panel-2);}
+  .drop-assumptions b{color:var(--text-dim);}
+
+  .controls{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;
+    padding:22px 0 6px;
+  }
+  .seg{ display:flex; gap:6px; flex-wrap:wrap; }
+  .seg button{
+    font-family:'IBM Plex Mono'; font-size:12px; font-weight:600; color:var(--text-dim);
+    background:var(--panel-2); border:1px solid var(--border); border-radius:7px;
+    padding:7px 12px; cursor:pointer; transition:border-color .15s;
+  }
+  .seg button.active{background:var(--accent); color:#FFFFFF; border-color:var(--accent);}
+  .seg button:hover:not(.active){border-color:var(--accent);}
+  .controls-right{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  .control-group{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .control-label{font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap;}
+
+  .section{margin-top:44px;}
+  .section-head{display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin-bottom:14px; flex-wrap:wrap;}
+  .section-eyebrow{font-family:'IBM Plex Mono'; font-size:11px; letter-spacing:1.8px; text-transform:uppercase; color:var(--accent);}
+  .section-title{font-family:'Kumbh Sans'; font-weight:600; font-size:20px; margin:4px 0 0;}
+  .section-note{font-size:12.5px; color:var(--text-faint); max-width:460px; text-align:right; line-height:1.5;}
+
+  .panel-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px;}
+  @media(max-width:1000px){.panel-grid{grid-template-columns:1fr;}}
+  .panel{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px 18px 16px; box-shadow:0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.05); min-width:0;}
+  .panel-title{font-family:'Kumbh Sans'; font-weight:600; font-size:14px; margin:0 0 4px;}
+  .panel-filters{font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-faint); line-height:1.6; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--border-soft);}
+  .panel-delta{font-size:11.5px; margin-top:10px; padding-top:10px; border-top:1px solid var(--border-soft); color:var(--text-dim);}
+  .panel-delta b{font-family:'IBM Plex Mono';}
+  .panel-delta.up b{color:var(--good);}
+  .panel-delta.down b{color:var(--bad);}
+  .panel-empty{font-size:12.5px; color:var(--text-faint); padding:14px 0;}
+
+  table{width:100%; border-collapse:collapse; font-size:11.5px;}
+  th{text-align:right; font-weight:500; color:var(--text-faint); padding:5px 6px; font-family:'IBM Plex Mono'; font-size:10.5px; border-bottom:1px solid var(--border-soft);}
+  th:first-child, td:first-child{text-align:left;}
+  td{text-align:right; padding:5px 6px; font-family:'IBM Plex Mono'; color:var(--text-dim); border-top:1px solid var(--border-soft);}
+  td:first-child{color:var(--text); font-family:'Roboto'; font-weight:500; font-size:11.5px;}
+  tr.total-row td{color:var(--text); font-weight:600; border-top:1px solid var(--border); background:var(--panel-2);}
+  tr.year-row td{color:var(--accent); font-weight:700; background:var(--accent-glow); border-top:1px solid var(--border);}
+  .table-scroll{overflow-x:auto;}
+
+  .footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--border-soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  .footer-text{font-size:11.5px; color:var(--text-faint); font-family:'IBM Plex Mono';}
+  .footer-filters{margin-top:24px; font-size:11px; color:var(--text-faint); line-height:1.7; background:var(--panel-2); border-radius:10px; padding:14px 18px;}
+  .footer-filters b{color:var(--text-dim);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand-text">
+    <div class="t1">Revisión Semanal · Pipe con Productos FCST</div>
+    <div class="t2" id="topbarSub">Réplica de las tablas dinámicas · corte cada 8 días</div>
+  </div>
+  <div id="topbarActions"></div>
+</div>
+
+<div class="wrap">
+
+  <div class="drop-screen" id="dropScreen">
+    <div class="drop-eyebrow">Pipe &amp; Forecast · Tablas dinámicas</div>
+    <h1 class="drop-title">Sube el Excel de "Pipe con productos FCST" y reconstruyo las tablas dinámicas de la hoja "TD"</h1>
+    <p class="drop-sub">Lee la hoja "Pipe con productos FCST" directamente (no las tablas dinámicas ya calculadas del archivo — las recalcula desde las filas crudas) y usa la <b>columna A ("Fecha de extracción")</b> como filtro de corte. Si acumulas varias semanas en el mismo archivo (una fecha de extracción distinta por corte), aquí puedes navegar entre ellas.</p>
+
+    <div class="dropzone" id="dropzone">
+      <div class="dropzone-title">Arrastra tu archivo aquí</div>
+      <div class="dropzone-sub">o haz clic para buscarlo · .xlsx</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+    </div>
+    <div class="drop-error hidden" id="dropError"></div>
+
+    <div class="drop-assumptions">
+      <b>Filtros replicados de las tablas dinámicas (hoja "TD" + "Secundarias" + "MegaDeals"):</b>
+      Tipo de registro = Oportunidad Estándar / Fast Track (Secundarias se muestran aparte) ·
+      Ganada = Etapa "Cerrada Ganada" · Pipe Abierto = Etapa en Prospección/Solución/Negociación/Cierre ·
+      Perdida = Etapa "Cerrada Perdida" · Estatus = Comprometida/Probable/Indeterminada ·
+      Valor = Suma de "Precio total (convertido)" por línea de producto (sin deduplicar oportunidad, igual que la tabla dinámica origen) ·
+      Mega Deal/Big Deal se filtra Sí/No/Todas según la tabla. La columna A de la hoja "Pipe con productos FCST" se lee como
+      <b>Fecha de extracción</b>: si no existe (archivo de un solo corte), se usa la fecha de generación del reporte.
+    </div>
+  </div>
+
+  <div id="dashboard" class="hidden">
+
+    <div class="controls">
+      <div class="control-group">
+        <span class="control-label">Fecha de extracción</span>
+        <div class="seg" id="dateTabs"></div>
+      </div>
+      <div class="controls-right">
+        <div class="control-group">
+          <span class="control-label">Año R (Fecha Real de Cierre)</span>
+          <div class="seg" id="yearTabs"></div>
+        </div>
+        <button class="btn" id="reloadBtn">Cargar otro archivo</button>
+      </div>
+    </div>
+
+    <div class="section" id="sec1">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Réplica · Tablas 1-5 de la hoja "TD"</div>
+          <h2 class="section-title">Forecast por Etapa y Mes</h2>
+        </div>
+        <div class="section-note">Filas = Estatus · Columnas = Mes R (Fecha Real de Cierre) · Valor = Suma de Precio total (convertido). Solo se muestran los meses con al menos una línea (igual que la tabla dinámica).</div>
+      </div>
+      <div class="panel-grid" id="panelsEtapaMes"></div>
+    </div>
+
+    <div class="section" id="sec2">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Réplica · Tabla 8 de la hoja "TD"</div>
+          <h2 class="section-title">Pipe Abierto por Vertical (incl. Mega Deals)</h2>
+        </div>
+        <div class="section-note">Filas = Estatus × Vertical · Columnas = Mes R. Incluye todas las Delivery Vertical/Línea de Servicios y todos los Mega Deal/Big Deal.</div>
+      </div>
+      <div id="panelVertical"></div>
+    </div>
+
+    <div class="section" id="sec3">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Réplica · Tablas 6-7 de la hoja "TD"</div>
+          <h2 class="section-title">Creación de Oportunidades — mes del corte</h2>
+        </div>
+        <div class="section-note" id="creacionNote">Filas = Estatus · Columnas = Día de creación · Solo Etapa Pipe Abierto, mes/año de la Fecha de extracción seleccionada.</div>
+      </div>
+      <div class="panel-grid" id="panelsCreacion"></div>
+    </div>
+
+    <div class="section" id="sec4">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Réplica · Hoja "Secundarias"</div>
+          <h2 class="section-title">Venta Secundaria — Cerrada Ganada</h2>
+        </div>
+        <div class="section-note">Solo Tipo de registro "Secundaria" (venta indirecta) · Filas = Unidad de Comercial · Columnas = Delivery Vertical/Línea de Servicios.</div>
+      </div>
+      <div id="panelSecundarias"></div>
+    </div>
+
+    <div class="section" id="sec5">
+      <div class="section-head">
+        <div>
+          <div class="section-eyebrow">Réplica · Hoja "MegaDeals"</div>
+          <h2 class="section-title">Mega Deals — Detalle</h2>
+        </div>
+        <div class="section-note">Solo Mega Deal/Big Deal = Verdadero, agrupado por oportunidad (una línea puede tener varios productos) y por Año R.</div>
+      </div>
+      <div id="panelMegaDeals"></div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-text" id="footerCorte"></div>
+      <div class="footer-text">Cálculo local en el navegador · sin envío de datos a servidores.</div>
+    </div>
+    <div class="footer-filters" id="footerFiltros"></div>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONSTANTES
+============================================================ */
+const ESTATUS_ORDER = ['Comprometida','Probable','Indeterminada'];
+const ETAPA_OPEN = ['Prospección','Solución','Negociación','Cierre'];
+const TIPO_PRINCIPAL = new Set(['Oportunidad Estándar','Oportunidad Fast Track']);
+const TIPO_SECUNDARIA = new Set(['Oportunidad Estándar Secundaria','Oportunidad Fast Track Secundaria']);
+const DO_LINEAS = new Set([
+  'Digital Operations - Cloud','Digital Operations - Cybersecurity','Digital Operations - Data Center',
+  'Digital Operations - DCom Infraestructura Cliente','Digital Operations - DCom Proyectos Especiales',
+  'Digital Operations - DCom Red Empresarial','Digital Operations - DCom Servicios Digitales',
+  'Digital Operations - SAP','Digital Operations - Serv. de Plat. - Productos',
+  'Digital Operations - Serv. de Plat. - Serv. Gestionados','Digital Operations - SW Factory',
+  'Digital Operations - Tecnologías Disruptivas','Digital Operations - Workplace Services'
+]);
+const VERTICAL_ORDER = ['Banca & Seguros','Multi Industrias','Retail & Comercio','Smart Cities & Mobility','Otras B2B'];
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+const STATE = {
+  rows: [],
+  dateGroups: [],   // [{key, label, date, rows}] ordenado desc
+  years: [],
+  selDateIdx: 0,
+  selYear: null,
+  snapshotDate: null,
+  reportFilters: []
+};
+
+/* ============================================================
+   HELPERS
+============================================================ */
+function sum(arr, fn){ return arr.reduce((s,r)=>s+(fn(r)||0),0); }
+function fmtMoney(v){
+  if (v == null || isNaN(v)) return '—';
+  const s = v < 0 ? '-' : '';
+  const abs = Math.abs(v);
+  if (abs === 0) return '$0';
+  if (abs >= 1e6) return s + '$' + (abs/1e6).toFixed(2) + 'M';
+  if (abs >= 1e3) return s + '$' + (abs/1e3).toFixed(0) + 'K';
+  return s + '$' + abs.toFixed(0);
+}
+function fmtInt(v){ return (v==null||isNaN(v)) ? '—' : String(Math.round(v)); }
+function fmtOppId(id){
+  const s = String(id).trim();
+  return /^\d+$/.test(s) ? s.padStart(8,'0') : s;
+}
+function fmtDateHuman(d){
+  if (!d) return '—';
+  return d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'});
+}
+function parseDMY(v){
+  if (v == null || v === '') return null;
+  if (v instanceof Date && !isNaN(v)) return v;
+  const m = String(v).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  return new Date(Date.UTC(Number(m[3]), Number(m[2])-1, Number(m[1])));
+}
+function dateKey(d){ return d ? d.toISOString().slice(0,10) : null; }
+
+/* ============================================================
+   PARSING
+============================================================ */
+function findSheet(wb, needle){
+  const low = needle.toLowerCase();
+  return wb.SheetNames.find(n => n.trim().toLowerCase() === low)
+      || wb.SheetNames.find(n => n.trim().toLowerCase().includes(low.split(' ')[0]));
+}
+function sheetAOA(wb, name){
+  return XLSX.utils.sheet_to_json(wb.Sheets[name], {header:1, raw:true, defval:null});
+}
+function findHeaderRowAOA(aoa, marker, maxScan=40){
+  for (let r=0; r<Math.min(aoa.length, maxScan); r++){
+    const row = aoa[r] || [];
+    for (let c=0; c<row.length; c++){
+      if (row[c] != null && String(row[c]).trim() === marker) return {r,c};
+    }
+  }
+  return null;
+}
+
+function parseMeta(wb){
+  let snapshotDate = null;
+  const filters = [];
+  for (const name of wb.SheetNames){
+    const aoa = sheetAOA(wb, name);
+    for (let r=0; r<Math.min(aoa.length, 20); r++){
+      const cell = (aoa[r]||[]).find(v=>v!=null && typeof v==='string' && v.includes('A partir de'));
+      if (cell){
+        const m = cell.match(/A partir de (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})/);
+        if (m) snapshotDate = new Date(`${m[1]}T${m[2]}Z`);
+      }
+    }
+    let inFilters = false;
+    for (let r=0; r<Math.min(aoa.length, 20); r++){
+      const v = (aoa[r]||[]).find(x=>x!=null);
+      if (v == null){ if (inFilters) break; continue; }
+      const s = String(v).trim();
+      if (s === 'Filtrado por'){ inFilters = true; continue; }
+      if (inFilters){ if (s === '') break; filters.push(s); }
+    }
+    if (snapshotDate) break;
+  }
+  return {snapshotDate, filters};
+}
+
+function parsePipe(wb){
+  const sheetName = findSheet(wb, 'pipe con productos fcst') || findSheet(wb, 'pipe');
+  if (!sheetName) throw new Error('No encontré la hoja "Pipe con productos FCST" en el archivo.');
+  const aoa = sheetAOA(wb, sheetName);
+  const hdr = findHeaderRowAOA(aoa, 'ID Oportunidad');
+  if (!hdr) throw new Error('No encontré el encabezado "ID Oportunidad" en la hoja de Pipe.');
+  const headerRow = aoa[hdr.r];
+  const col = {};
+  headerRow.forEach((h,i)=>{ if (h!=null && String(h).trim()!=='') col[String(h).trim()] = i; });
+  const get = (row,key)=> col[key]!=null ? row[col[key]] : null;
+  const hasExtraccionCol = headerRow[0] != null && String(headerRow[0]).trim() !== '';
+
+  const rows = [];
+  for (let r=hdr.r+1; r<aoa.length; r++){
+    const row = aoa[r]; if (!row) continue;
+    const id = get(row,'ID Oportunidad');
+    if (id == null || id === '') continue;
+    const etapa = String(get(row,'Etapa') || '').trim();
+    const megaRaw = get(row,'Mega Deal/Big Deal');
+    const fechaExtraccion = parseDMY(row[0]);
+    rows.push({
+      id, etapa,
+      cuenta: get(row,'Cuenta') || '',
+      tema: get(row,'Tema') || '',
+      precioTotal: Number(get(row,'Precio total (convertido)')) || 0,
+      fechaCierre: parseDMY(get(row,'Fecha Real de Cierre')),
+      mesR: Number(get(row,'Mes R')) || null,
+      añoR: Number(get(row,'Año R')) || null,
+      estatus: String(get(row,'Estatus') || '').trim(),
+      fechaCreacion: parseDMY(get(row,'Fecha de creación')),
+      diaC: Number(get(row,'Dia C')) || null,
+      mesC: Number(get(row,'Mes C')) || null,
+      añoC: Number(get(row,'Año  C')) || null,
+      unidadComercial: String(get(row,'Unidad de Comercial') || '').trim(),
+      deliveryVertical: String(get(row,'Delivery Vertical/Línea de Servicios') || '').trim(),
+      tipoRegistro: String(get(row,'Tipo de registro de la oportunidad') || '').trim(),
+      vertical: String(get(row,'Vertical') || '').trim() || 'Otras B2B',
+      megaDeal: megaRaw === true || String(megaRaw).trim().toUpperCase() === 'TRUE' || String(megaRaw).trim().toUpperCase() === 'VERDADERO',
+      fechaExtraccion
+    });
+  }
+  if (!rows.length) throw new Error('La hoja de Pipe no tiene filas de datos debajo del encabezado.');
+  rows.hasExtraccionCol = hasExtraccionCol;
+  return rows;
+}
+
+function buildDateGroups(rows, meta){
+  const withDate = rows.filter(r=>r.fechaExtraccion);
+  if (!withDate.length){
+    const fallbackDate = meta.snapshotDate || null;
+    return [{
+      key: fallbackDate ? dateKey(fallbackDate) : 'unico',
+      label: fallbackDate ? fmtDateHuman(fallbackDate) : 'Corte único',
+      date: fallbackDate,
+      rows: rows,
+      isFallback: true
+    }];
+  }
+  const map = new Map();
+  for (const r of rows){
+    const k = r.fechaExtraccion ? dateKey(r.fechaExtraccion) : 'sin-fecha';
+    if (!map.has(k)) map.set(k, {key:k, label: r.fechaExtraccion ? fmtDateHuman(r.fechaExtraccion) : 'Sin fecha de extracción', date: r.fechaExtraccion, rows: []});
+    map.get(k).rows.push(r);
+  }
+  return [...map.values()].sort((a,b)=>{
+    if (!a.date) return 1; if (!b.date) return -1;
+    return b.date - a.date;
+  });
+}
+
+/* ============================================================
+   PIVOT ENGINE
+============================================================ */
+function buildPivot(rows, {rowOrder, getRowKey, getColKey, colSort, valueFn}){
+  const matrix = {};
+  const rowTotals = {};
+  const colSet = new Set();
+  const colTotals = {};
+  let grand = 0;
+  for (const rk of rowOrder){ matrix[rk] = {}; rowTotals[rk] = 0; }
+  for (const r of rows){
+    const rk = getRowKey(r);
+    if (rk == null || !(rk in matrix)) continue;
+    const ck = getColKey(r);
+    if (ck == null) continue;
+    colSet.add(ck);
+    const v = valueFn(r);
+    matrix[rk][ck] = (matrix[rk][ck]||0) + v;
+    rowTotals[rk] += v;
+    colTotals[ck] = (colTotals[ck]||0) + v;
+    grand += v;
+  }
+  const colOrder = [...colSet].sort(colSort);
+  return {rowOrder, colOrder, matrix, rowTotals, colTotals, grand};
+}
+
+function filterRows(rows, f){
+  return rows.filter(r=>{
+    if (f.tipo && !f.tipo.has(r.tipoRegistro)) return false;
+    if (f.megaDeal === 'FALSO' && r.megaDeal) return false;
+    if (f.megaDeal === 'TRUE' && !r.megaDeal) return false;
+    if (f.etapa){
+      if (Array.isArray(f.etapa)){ if (!f.etapa.includes(r.etapa)) return false; }
+      else if (r.etapa !== f.etapa) return false;
+    }
+    if (f.añoR != null && r.añoR !== f.añoR) return false;
+    if (f.añoC != null && r.añoC !== f.añoC) return false;
+    if (f.mesC != null && r.mesC !== f.mesC) return false;
+    if (f.deliveryVerticalSet && !f.deliveryVerticalSet.has(r.deliveryVertical)) return false;
+    return true;
+  });
+}
+
+/* ============================================================
+   RENDER: tabla mes (Estatus x Mes R)
+============================================================ */
+function renderMesPivotTable(pivot, {countMode=false}={}){
+  if (!pivot.colOrder.length) return '<div class="panel-empty">Sin datos para este filtro en el corte seleccionado.</div>';
+  let h = '<div class="table-scroll"><table><thead><tr><th></th>';
+  for (const c of pivot.colOrder) h += `<th>${MESES[c-1]||c}</th>`;
+  h += '<th>Total</th></tr></thead><tbody>';
+  for (const rk of pivot.rowOrder){
+    h += `<tr><td>${rk}</td>`;
+    for (const c of pivot.colOrder){
+      const v = pivot.matrix[rk][c] || 0;
+      h += `<td>${countMode ? (v? fmtInt(v):'—') : (v? fmtMoney(v):'—')}</td>`;
+    }
+    h += `<td>${countMode ? fmtInt(pivot.rowTotals[rk]) : fmtMoney(pivot.rowTotals[rk])}</td></tr>`;
+  }
+  h += '<tr class="total-row"><td>Total general</td>';
+  for (const c of pivot.colOrder) h += `<td>${countMode ? fmtInt(pivot.colTotals[c]) : fmtMoney(pivot.colTotals[c])}</td>`;
+  h += `<td>${countMode ? fmtInt(pivot.grand) : fmtMoney(pivot.grand)}</td></tr>`;
+  h += '</tbody></table></div>';
+  return h;
+}
+
+function renderDiaPivotTable(pivot, {countMode=false}={}){
+  if (!pivot.colOrder.length) return '<div class="panel-empty">Sin datos para este filtro en el corte seleccionado.</div>';
+  let h = '<div class="table-scroll"><table><thead><tr><th></th>';
+  for (const c of pivot.colOrder) h += `<th>${c}</th>`;
+  h += '<th>Total</th></tr></thead><tbody>';
+  for (const rk of pivot.rowOrder){
+    h += `<tr><td>${rk}</td>`;
+    for (const c of pivot.colOrder){
+      const v = pivot.matrix[rk][c] || 0;
+      h += `<td>${countMode ? (v? fmtInt(v):'—') : (v? fmtMoney(v):'—')}</td>`;
+    }
+    h += `<td>${countMode ? fmtInt(pivot.rowTotals[rk]) : fmtMoney(pivot.rowTotals[rk])}</td></tr>`;
+  }
+  h += '<tr class="total-row"><td>Total general</td>';
+  for (const c of pivot.colOrder) h += `<td>${countMode ? fmtInt(pivot.colTotals[c]) : fmtMoney(pivot.colTotals[c])}</td>`;
+  h += `<td>${countMode ? fmtInt(pivot.grand) : fmtMoney(pivot.grand)}</td></tr>`;
+  h += '</tbody></table></div>';
+  return h;
+}
+
+function renderDeltaBadge(current, prevGroup, filterFn, valueFn){
+  if (!prevGroup) return '<div class="panel-delta">Primer corte registrado — sin comparación disponible.</div>';
+  const prevRows = filterFn(prevGroup.rows);
+  const prevTotal = sum(prevRows, valueFn);
+  const diff = current - prevTotal;
+  const cls = diff > 0 ? 'up' : (diff < 0 ? 'down' : '');
+  const sign = diff > 0 ? '+' : '';
+  return `<div class="panel-delta ${cls}">vs. corte anterior (${prevGroup.label}): <b>${sign}${fmtMoney(diff)}</b> (${fmtMoney(prevTotal)} → ${fmtMoney(current)})</div>`;
+}
+
+/* ============================================================
+   PANELES
+============================================================ */
+function panelHtml(title, filtersDesc, bodyHtml, deltaHtml){
+  return `<div class="panel">
+    <div class="panel-title">${title}</div>
+    <div class="panel-filters">${filtersDesc}</div>
+    ${bodyHtml}
+    ${deltaHtml||''}
+  </div>`;
+}
+
+function renderAll(){
+  const group = STATE.dateGroups[STATE.selDateIdx];
+  const rows = group.rows;
+  const prevGroup = STATE.dateGroups[STATE.selDateIdx+1] || null;
+  const año = STATE.selYear;
+
+  /* ---- Sección 1: Forecast por Etapa y Mes ---- */
+  const etapaMesDefs = [
+    {
+      title: 'Cerrada Ganada (sin Mega Deals)',
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:'FALSO', etapa:'Cerrada Ganada', añoR: año},
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=No · Etapa=Cerrada Ganada · Año R=${año}`
+    },
+    {
+      title: 'Cerrada Ganada · Digital Operations (sin Mega Deals)',
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:'FALSO', etapa:'Cerrada Ganada', añoR: año, deliveryVerticalSet: DO_LINEAS},
+      desc: `Igual que arriba + Delivery Vertical = solo líneas "Digital Operations"`
+    },
+    {
+      title: 'Cerrada Perdida (todas, incl. Mega Deals)',
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:null, etapa:'Cerrada Perdida', añoR: año},
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=Todas · Etapa=Cerrada Perdida · Año R=${año}`
+    },
+    {
+      title: 'Pipe Abierto (sin Mega Deals)',
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:'FALSO', etapa: ETAPA_OPEN, añoR: año},
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=No · Etapa=Prospección/Solución/Negociación/Cierre · Año R=${año}`
+    },
+    {
+      title: 'Pipe Abierto (con Mega Deals)',
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:null, etapa: ETAPA_OPEN, añoR: año},
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=Todas · Etapa=Prospección/Solución/Negociación/Cierre · Año R=${año}`
+    }
+  ];
+  const panelsEtapaMes = document.getElementById('panelsEtapaMes');
+  panelsEtapaMes.innerHTML = etapaMesDefs.map(def=>{
+    const scoped = filterRows(rows, def.filters);
+    const pivot = buildPivot(scoped, {
+      rowOrder: ESTATUS_ORDER,
+      getRowKey: r=>r.estatus,
+      getColKey: r=>r.mesR,
+      colSort: (a,b)=>a-b,
+      valueFn: r=>r.precioTotal
+    });
+    const delta = renderDeltaBadge(pivot.grand, prevGroup, rws=>filterRows(rws, def.filters), r=>r.precioTotal);
+    return panelHtml(def.title, def.desc, renderMesPivotTable(pivot), delta);
+  }).join('');
+
+  /* ---- Sección 2: Pipe por Vertical ---- */
+  const vertFilters = {tipo: TIPO_PRINCIPAL, megaDeal:null, etapa: ETAPA_OPEN, añoR: año};
+  const vertScoped = filterRows(rows, vertFilters);
+  const vertRowOrder = [];
+  for (const est of ESTATUS_ORDER) for (const v of VERTICAL_ORDER) vertRowOrder.push(est+' · '+v);
+  const vertPivot = buildPivot(vertScoped, {
+    rowOrder: vertRowOrder,
+    getRowKey: r=> (ESTATUS_ORDER.includes(r.estatus) && VERTICAL_ORDER.includes(r.vertical)) ? (r.estatus+' · '+r.vertical) : null,
+    getColKey: r=>r.mesR,
+    colSort: (a,b)=>a-b,
+    valueFn: r=>r.precioTotal
+  });
+  // solo mostrar combinaciones con datos, en orden Estatus > Vertical
+  vertPivot.rowOrder = vertRowOrder.filter(rk => vertPivot.rowTotals[rk] > 0);
+  const vertDelta = renderDeltaBadge(vertPivot.grand, prevGroup, rws=>filterRows(rws, vertFilters), r=>r.precioTotal);
+  document.getElementById('panelVertical').innerHTML = panelHtml(
+    `Pipe Abierto por Vertical · Año R=${año}`,
+    `Tipo=Estándar/Fast Track · Mega Deal=Todas · Etapa=Pipe Abierto · Delivery Vertical=Todas · Año R=${año}`,
+    renderMesPivotTable(vertPivot),
+    vertDelta
+  );
+
+  /* ---- Sección 3: Creación de Oportunidades (mes del corte) ---- */
+  const corteDate = group.date;
+  const mesC = corteDate ? corteDate.getUTCMonth()+1 : null;
+  const añoC = corteDate ? corteDate.getUTCFullYear() : null;
+  document.getElementById('creacionNote').textContent =
+    corteDate ? `Filas = Estatus · Columnas = Día de creación · Etapa Pipe Abierto · Mes/Año de creación = ${MESES[mesC-1]} ${añoC} (mes de la fecha de extracción seleccionada).`
+              : 'No hay fecha de extracción para este corte — no se puede acotar al mes de creación.';
+  const creacionDefs = [
+    {title:'Creación de Oportunidades — # (conteo)', filters:{tipo:TIPO_PRINCIPAL, megaDeal:'FALSO', etapa:ETAPA_OPEN, mesC, añoC}, countMode:true, valueFn:()=>1},
+    {title:'Creación de Oportunidades — $ (monto)', filters:{tipo:TIPO_PRINCIPAL, megaDeal:null, etapa:ETAPA_OPEN, mesC, añoC}, countMode:false, valueFn:r=>r.precioTotal}
+  ];
+  const panelsCreacion = document.getElementById('panelsCreacion');
+  if (mesC == null){
+    panelsCreacion.innerHTML = '<div class="panel"><div class="panel-empty">Sin fecha de extracción disponible para este corte.</div></div>';
+  } else {
+    panelsCreacion.innerHTML = creacionDefs.map(def=>{
+      const scoped = filterRows(rows, def.filters);
+      const pivot = buildPivot(scoped, {
+        rowOrder: ESTATUS_ORDER,
+        getRowKey: r=>r.estatus,
+        getColKey: r=>r.diaC,
+        colSort: (a,b)=>a-b,
+        valueFn: def.valueFn
+      });
+      const desc = `Tipo=Estándar/Fast Track · Mega Deal=${def.filters.megaDeal==='FALSO'?'No':'Todas'} · Etapa=Pipe Abierto · Mes C=${mesC} · Año C=${añoC}`;
+      const delta = renderDeltaBadge(pivot.grand, prevGroup, rws=>filterRows(rws, def.filters), def.valueFn);
+      return panelHtml(def.title, desc, renderDiaPivotTable(pivot, {countMode: def.countMode}), def.countMode ? '' : delta);
+    }).join('');
+  }
+
+  /* ---- Sección 4: Secundarias ---- */
+  const secFilters = {tipo: TIPO_SECUNDARIA, etapa:'Cerrada Ganada'};
+  const secScoped = filterRows(rows, secFilters);
+  const secPivot = buildPivot(secScoped, {
+    rowOrder: [...new Set(secScoped.map(r=>r.unidadComercial))].sort(),
+    getRowKey: r=>r.unidadComercial,
+    getColKey: r=>r.deliveryVertical,
+    colSort: (a,b)=>a.localeCompare(b),
+    valueFn: r=>r.precioTotal
+  });
+  const secDelta = renderDeltaBadge(secPivot.grand, prevGroup, rws=>filterRows(rws, secFilters), r=>r.precioTotal);
+  document.getElementById('panelSecundarias').innerHTML = panelHtml(
+    'Venta Secundaria — Cerrada Ganada, todos los años',
+    'Tipo=Oportunidad Estándar Secundaria / Fast Track Secundaria · Etapa=Cerrada Ganada (sin filtro de año)',
+    renderMesPivotColsText(secPivot),
+    secDelta
+  );
+
+  /* ---- Sección 5: Mega Deals ---- */
+  const mdFilters = {tipo: TIPO_PRINCIPAL, megaDeal:'TRUE'};
+  const mdScoped = filterRows(rows, mdFilters);
+  const byOpp = new Map();
+  for (const r of mdScoped){
+    const key = fmtOppId(r.id);
+    if (!byOpp.has(key)) byOpp.set(key, {...r, id:key, precioTotal:0});
+    byOpp.get(key).precioTotal += r.precioTotal;
+  }
+  const opps = [...byOpp.values()].sort((a,b)=>(a.añoR||0)-(b.añoR||0) || b.precioTotal-a.precioTotal);
+  document.getElementById('panelMegaDeals').innerHTML = panelHtml(
+    'Mega Deals — Detalle por oportunidad',
+    'Tipo=Estándar/Fast Track · Mega Deal=Sí (sin filtro de año ni etapa)',
+    renderMegaDealsTable(opps),
+    renderDeltaBadge(sum(opps,r=>r.precioTotal), prevGroup, rws=>{
+      const sc = filterRows(rws, mdFilters);
+      const m = new Map();
+      for (const r of sc){ const key = fmtOppId(r.id); m.set(key, (m.get(key)||0)+r.precioTotal); }
+      return [...m.entries()].map(([id,precioTotal])=>({precioTotal}));
+    }, r=>r.precioTotal)
+  );
+
+  /* ---- Footer ---- */
+  document.getElementById('footerCorte').textContent =
+    `Fecha de extracción activa: ${group.label}` + (group.isFallback ? ' (sin columna A — corte único del archivo)' : '') +
+    ` · ${rows.length.toLocaleString('es-MX')} líneas en este corte`;
+  document.getElementById('footerFiltros').innerHTML =
+    '<b>Filtrado por (encabezado original del reporte de Salesforce):</b><br>' + STATE.reportFilters.map(f=>'· '+f).join('<br>');
+}
+
+function renderMesPivotColsText(pivot){
+  if (!pivot.colOrder.length) return '<div class="panel-empty">Sin datos para este filtro en el corte seleccionado.</div>';
+  let h = '<div class="table-scroll"><table><thead><tr><th></th>';
+  for (const c of pivot.colOrder) h += `<th>${c}</th>`;
+  h += '<th>Total</th></tr></thead><tbody>';
+  for (const rk of pivot.rowOrder){
+    h += `<tr><td>${rk}</td>`;
+    for (const c of pivot.colOrder){
+      const v = pivot.matrix[rk][c] || 0;
+      h += `<td>${v ? fmtMoney(v) : '—'}</td>`;
+    }
+    h += `<td>${fmtMoney(pivot.rowTotals[rk])}</td></tr>`;
+  }
+  h += '<tr class="total-row"><td>Total general</td>';
+  for (const c of pivot.colOrder) h += `<td>${fmtMoney(pivot.colTotals[c])}</td>`;
+  h += `<td>${fmtMoney(pivot.grand)}</td></tr>`;
+  h += '</tbody></table></div>';
+  return h;
+}
+
+function renderMegaDealsTable(opps){
+  if (!opps.length) return '<div class="panel-empty">No hay Mega Deals en este corte.</div>';
+  let h = '<div class="table-scroll"><table><thead><tr><th>Año R</th><th style="text-align:left">ID</th><th style="text-align:left">Tema</th><th style="text-align:left">Cuenta</th><th style="text-align:left">Vertical</th><th style="text-align:left">Etapa</th><th style="text-align:left">Estatus</th><th>Precio total</th></tr></thead><tbody>';
+  let curYear = null, yearTotal = 0, grand = 0;
+  const flushYear = ()=>{
+    if (curYear != null) h += `<tr class="year-row"><td colspan="7">Total ${curYear}</td><td>${fmtMoney(yearTotal)}</td></tr>`;
+  };
+  for (const o of opps){
+    if (o.añoR !== curYear){ flushYear(); curYear = o.añoR; yearTotal = 0; }
+    yearTotal += o.precioTotal; grand += o.precioTotal;
+    h += `<tr><td>${o.añoR||'—'}</td><td style="text-align:left">${o.id}</td><td style="text-align:left">${o.tema||'—'}</td><td style="text-align:left">${o.cuenta||'—'}</td><td style="text-align:left">${o.vertical||'—'}</td><td style="text-align:left">${o.etapa||'—'}</td><td style="text-align:left">${o.estatus||'—'}</td><td>${fmtMoney(o.precioTotal)}</td></tr>`;
+  }
+  flushYear();
+  h += `<tr class="total-row"><td colspan="7">Total general</td><td>${fmtMoney(grand)}</td></tr>`;
+  h += '</tbody></table></div>';
+  return h;
+}
+
+/* ============================================================
+   CONTROLES
+============================================================ */
+function renderControls(){
+  const dateTabs = document.getElementById('dateTabs');
+  dateTabs.innerHTML = STATE.dateGroups.map((g,i)=>
+    `<button data-idx="${i}" class="${i===STATE.selDateIdx?'active':''}">${g.label}</button>`
+  ).join('');
+  dateTabs.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{ STATE.selDateIdx = Number(b.dataset.idx); renderControls(); renderAll(); });
+  });
+
+  const yearTabs = document.getElementById('yearTabs');
+  yearTabs.innerHTML = STATE.years.map(y=>
+    `<button data-y="${y}" class="${y===STATE.selYear?'active':''}">${y}</button>`
+  ).join('');
+  yearTabs.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{ STATE.selYear = Number(b.dataset.y); renderControls(); renderAll(); });
+  });
+}
+
+/* ============================================================
+   CARGA DE ARCHIVO
+============================================================ */
+function showError(msg){
+  const el = document.getElementById('dropError');
+  el.textContent = msg; el.classList.remove('hidden');
+}
+function clearError(){ document.getElementById('dropError').classList.add('hidden'); }
+
+function handleFile(file){
+  clearError();
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const rows = parsePipe(wb);
+      const meta = parseMeta(wb);
+      STATE.rows = rows;
+      STATE.reportFilters = meta.filters;
+      STATE.snapshotDate = meta.snapshotDate;
+      STATE.dateGroups = buildDateGroups(rows, meta);
+      STATE.selDateIdx = 0;
+      STATE.years = [...new Set(rows.map(r=>r.añoR).filter(y=>y))].sort((a,b)=>a-b);
+      STATE.selYear = STATE.years.includes(new Date().getUTCFullYear()) ? new Date().getUTCFullYear() : STATE.years[0];
+      document.getElementById('dropScreen').classList.add('hidden');
+      document.getElementById('dashboard').classList.remove('hidden');
+      renderControls();
+      renderAll();
+    } catch(err){
+      showError(err.message || String(err));
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+dropzone.addEventListener('click', ()=>fileInput.click());
+fileInput.addEventListener('change', e=>{ if (e.target.files[0]) handleFile(e.target.files[0]); });
+dropzone.addEventListener('dragover', e=>{ e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', ()=> dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e=>{
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+document.getElementById('reloadBtn').addEventListener('click', ()=>{
+  document.getElementById('dashboard').classList.add('hidden');
+  document.getElementById('dropScreen').classList.remove('hidden');
+  fileInput.value = '';
+});
+</script>
+</body>
+</html>
