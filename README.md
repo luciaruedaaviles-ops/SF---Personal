@@ -118,6 +118,9 @@ en Excel; aquí siempre se recalculan con los datos más recientes del archivo).
 5. El selector **"Con Mega Deals" / "Sin Mega Deals"** aplica a todas las tarjetas que en el
    workbook original existían dos veces (una con el filtro Mega Deal = No y otra con Mega Deal =
    Todas) — así se revisa cualquiera de las dos vistas sin duplicar tarjetas en el tablero.
+6. En "Creación de Oportunidades" puedes elegir **Año y Mes de la Fecha de Creación** con sus
+   propios botones (independientes de la Fecha de extracción) — por defecto usan el mes/año del
+   corte activo; el botón "Usar mes del corte" vuelve a ese valor automático en cualquier momento.
 
 ### Tablas replicadas y sus filtros
 
@@ -131,7 +134,7 @@ dinámica de origen). En resumen:
 | Cerrada Perdida | Estatus | Mes R | Mega Deal = selector Con/Sin · Etapa = Cerrada Perdida |
 | Pipe Abierto | Estatus | Mes R | Mega Deal = selector Con/Sin · Etapa = Prospección/Solución/Negociación/Cierre |
 | Pipe Abierto por Vertical | Estatus × Vertical | Mes R | Mega Deal = selector Con/Sin · Delivery Vertical = Todas |
-| Creación de Oportunidades # / $ | Estatus | Día de creación | Mega Deal = selector Con/Sin · Mes/Año de creación = mes de la Fecha de extracción del corte activo |
+| Creación de Oportunidades # / $ | Estatus | Día de creación | Mega Deal = selector Con/Sin · Mes/Año de creación = selector propio (por defecto, el mes de la Fecha de extracción del corte activo) |
 | Venta Secundaria — Cerrada Ganada | Unidad de Comercial | Delivery Vertical/Línea de Servicios | Tipo = Secundaria (venta indirecta) · Etapa = Cerrada Ganada (sin filtro de Mega Deal en la tabla original) |
 | Mega Deals — Detalle | — (lista por oportunidad) | — | Mega Deal = Sí, agrupado por ID de oportunidad (no cambia con el selector Con/Sin — es la vista dedicada a Mega Deals) |
 

@@ -203,9 +203,20 @@
       <div class="section-head">
         <div>
           <div class="section-eyebrow">Réplica · Tablas 6-7 de la hoja "TD"</div>
-          <h2 class="section-title">Creación de Oportunidades — mes del corte</h2>
+          <h2 class="section-title">Creación de Oportunidades</h2>
         </div>
-        <div class="section-note" id="creacionNote">Filas = Estatus · Columnas = Día de creación · Solo Etapa Pipe Abierto, mes/año de la Fecha de extracción seleccionada.</div>
+        <div class="section-note" id="creacionNote">Filas = Estatus · Columnas = Día de creación (Fecha de Creación) · Solo Etapa Pipe Abierto.</div>
+      </div>
+      <div class="controls" style="padding-top:0;">
+        <div class="control-group">
+          <span class="control-label">Año (Fecha de Creación)</span>
+          <div class="seg" id="añoCTabs"></div>
+        </div>
+        <div class="control-group">
+          <span class="control-label">Mes (Fecha de Creación)</span>
+          <div class="seg" id="mesCTabs"></div>
+        </div>
+        <button class="btn" id="resetCreacionBtn">Usar mes del corte</button>
       </div>
       <div class="panel-grid" id="panelsCreacion"></div>
     </div>
@@ -267,6 +278,8 @@ const STATE = {
   selDateIdx: 0,
   selYear: null,
   megaDealMode: 'con',   // 'con' | 'sin' — filtro global Con/Sin Mega Deals
+  selAñoC: null,   // null = usar el año de la Fecha de extracción del corte activo
+  selMesC: null,   // null = usar el mes de la Fecha de extracción del corte activo
   snapshotDate: null,
   reportFilters: []
 };
@@ -593,20 +606,41 @@ function renderAll(){
     vertDelta
   );
 
-  /* ---- Sección 3: Creación de Oportunidades (mes del corte) ---- */
+  /* ---- Sección 3: Creación de Oportunidades ---- */
   const corteDate = group.date;
-  const mesC = corteDate ? corteDate.getUTCMonth()+1 : null;
-  const añoC = corteDate ? corteDate.getUTCFullYear() : null;
-  document.getElementById('creacionNote').textContent =
-    corteDate ? `Filas = Estatus · Columnas = Día de creación · Etapa Pipe Abierto · Mes/Año de creación = ${MESES[mesC-1]} ${añoC} (mes de la fecha de extracción seleccionada).`
-              : 'No hay fecha de extracción para este corte — no se puede acotar al mes de creación.';
+  const defaultMesC = corteDate ? corteDate.getUTCMonth()+1 : null;
+  const defaultAñoC = corteDate ? corteDate.getUTCFullYear() : null;
+  const añoCOptions = [...new Set(rows.map(r=>r.añoC).filter(y=>y))].sort((a,b)=>a-b);
+  const añoC = STATE.selAñoC != null ? STATE.selAñoC : (añoCOptions.includes(defaultAñoC) ? defaultAñoC : añoCOptions[añoCOptions.length-1]);
+  const mesC = STATE.selMesC != null ? STATE.selMesC : (defaultAñoC === añoC ? defaultMesC : null);
+
+  const añoCTabs = document.getElementById('añoCTabs');
+  añoCTabs.innerHTML = añoCOptions.map(y=>
+    `<button data-y="${y}" class="${y===añoC?'active':''}">${y}</button>`
+  ).join('');
+  añoCTabs.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{ STATE.selAñoC = Number(b.dataset.y); renderAll(); });
+  });
+  const mesCTabs = document.getElementById('mesCTabs');
+  mesCTabs.innerHTML = MESES.map((label,i)=>
+    `<button data-m="${i+1}" class="${(i+1)===mesC?'active':''}">${label}</button>`
+  ).join('');
+  mesCTabs.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{ STATE.selMesC = Number(b.dataset.m); renderAll(); });
+  });
+  document.getElementById('resetCreacionBtn').onclick = ()=>{ STATE.selAñoC = null; STATE.selMesC = null; renderAll(); };
+
+  const usandoCorte = STATE.selAñoC == null && STATE.selMesC == null;
+  document.getElementById('creacionNote').textContent = mesC
+    ? `Filas = Estatus · Columnas = Día de creación · Etapa Pipe Abierto · Mes/Año de creación = ${MESES[mesC-1]} ${añoC}` + (usandoCorte ? ' (mes de la fecha de extracción del corte activo).' : ' (elegido con los botones de arriba).')
+    : 'No hay líneas con Fecha de Creación en ese año para este corte.';
   const creacionDefs = [
     {title:'Creación de Oportunidades — # (conteo)', filters:{tipo:TIPO_PRINCIPAL, megaDeal:md, etapa:ETAPA_OPEN, mesC, añoC}, countMode:true, valueFn:()=>1},
     {title:'Creación de Oportunidades — $ (monto)', filters:{tipo:TIPO_PRINCIPAL, megaDeal:md, etapa:ETAPA_OPEN, mesC, añoC}, countMode:false, valueFn:r=>r.precioTotal}
   ];
   const panelsCreacion = document.getElementById('panelsCreacion');
   if (mesC == null){
-    panelsCreacion.innerHTML = '<div class="panel"><div class="panel-empty">Sin fecha de extracción disponible para este corte.</div></div>';
+    panelsCreacion.innerHTML = '<div class="panel"><div class="panel-empty">Sin datos de Fecha de Creación para ese año/mes en este corte.</div></div>';
   } else {
     panelsCreacion.innerHTML = creacionDefs.map(def=>{
       const scoped = filterRows(rows, def.filters);
