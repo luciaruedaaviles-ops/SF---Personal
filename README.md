@@ -132,7 +132,7 @@ dinámica de origen). En resumen:
 | Cerrada Ganada | Estatus | Mes R | Tipo Estándar/Fast Track · Mega Deal = selector Con/Sin · Etapa = Cerrada Ganada |
 | Cerrada Ganada · Sin Soluciones de Vertical | Estatus | Mes R | Igual + Delivery Vertical excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities) |
 | Cerrada Perdida | Estatus | Mes R | Mega Deal = selector Con/Sin · Etapa = Cerrada Perdida |
-| Cerrada Perdida — Detalle | — (lista por línea, ID/Cuenta/Tema/Fecha Real de Cierre/Precio total) | — | Mismo filtro que "Cerrada Perdida", ordenado de mayor a menor por Precio total (convertido) |
+| Cerrada Perdida — Detalle | — (lista por línea, ID/Cuenta/Tema/Fecha Real de Cierre/Precio total) | — | Mismo filtro que "Cerrada Perdida" + Mes R = selector propio (Todos/Ene.../Dic, solo meses con datos), ordenado de mayor a menor por Precio total (convertido) |
 | Pipe Abierto | Estatus | Mes R | Mega Deal = selector Con/Sin · Etapa = Prospección/Solución/Negociación/Cierre |
 | Pipe Abierto por Vertical | Vertical | Mes R | Mega Deal = selector Con/Sin · Estatus = selector propio (Todas/Comprometida/Probable/Indeterminada) · Delivery Vertical = Todas |
 | Creación de Oportunidades # / $ | Estatus | Día de creación | Mega Deal = selector Con/Sin · Mes/Año de creación = selector propio (por defecto, el mes de la Fecha de extracción del corte activo) |
