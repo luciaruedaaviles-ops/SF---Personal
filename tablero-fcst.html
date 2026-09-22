@@ -79,6 +79,10 @@
   }
   .seg button.active{background:var(--accent); color:#FFFFFF; border-color:var(--accent);}
   .seg button:hover:not(.active){border-color:var(--accent);}
+  .seg.dates button{
+    padding:8px 16px; border-radius:8px; border-width:1.5px; font-weight:700;
+  }
+  .seg.dates button:not(.active){box-shadow:0 1px 2px rgba(16,24,40,0.04);}
   .controls-right{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
   .control-group{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
   .control-label{font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap;}
@@ -154,10 +158,17 @@
 
     <div class="controls">
       <div class="control-group">
-        <span class="control-label">Fecha de extracción</span>
-        <div class="seg" id="dateTabs"></div>
+        <span class="control-label">Consultar por Fecha de Extracción (columna A)</span>
+        <div class="seg dates" id="dateTabs"></div>
       </div>
       <div class="controls-right">
+        <div class="control-group">
+          <span class="control-label">Mega Deals</span>
+          <div class="seg" id="mdToggle">
+            <button data-val="con">Con Mega Deals</button>
+            <button data-val="sin">Sin Mega Deals</button>
+          </div>
+        </div>
         <div class="control-group">
           <span class="control-label">Año R (Fecha Real de Cierre)</span>
           <div class="seg" id="yearTabs"></div>
@@ -172,7 +183,7 @@
           <div class="section-eyebrow">Réplica · Tablas 1-5 de la hoja "TD"</div>
           <h2 class="section-title">Forecast por Etapa y Mes</h2>
         </div>
-        <div class="section-note">Filas = Estatus · Columnas = Mes R (Fecha Real de Cierre) · Valor = Suma de Precio total (convertido). Solo se muestran los meses con al menos una línea (igual que la tabla dinámica).</div>
+        <div class="section-note">Filas = Estatus · Columnas = Mes R (Fecha Real de Cierre) · Valor = Suma de Precio total (convertido). El filtro Con/Sin Mega Deals de arriba aplica a las 4 tarjetas. Solo se muestran los meses con al menos una línea (igual que la tabla dinámica).</div>
       </div>
       <div class="panel-grid" id="panelsEtapaMes"></div>
     </div>
@@ -181,9 +192,9 @@
       <div class="section-head">
         <div>
           <div class="section-eyebrow">Réplica · Tabla 8 de la hoja "TD"</div>
-          <h2 class="section-title">Pipe Abierto por Vertical (incl. Mega Deals)</h2>
+          <h2 class="section-title">Pipe Abierto por Vertical</h2>
         </div>
-        <div class="section-note">Filas = Estatus × Vertical · Columnas = Mes R. Incluye todas las Delivery Vertical/Línea de Servicios y todos los Mega Deal/Big Deal.</div>
+        <div class="section-note">Filas = Estatus × Vertical · Columnas = Mes R. Incluye todas las Delivery Vertical/Línea de Servicios — Mega Deals según el filtro de arriba.</div>
       </div>
       <div id="panelVertical"></div>
     </div>
@@ -255,6 +266,7 @@ const STATE = {
   years: [],
   selDateIdx: 0,
   selYear: null,
+  megaDealMode: 'con',   // 'con' | 'sin' — filtro global Con/Sin Mega Deals
   snapshotDate: null,
   reportFilters: []
 };
@@ -519,33 +531,30 @@ function renderAll(){
   const rows = group.rows;
   const prevGroup = STATE.dateGroups[STATE.selDateIdx+1] || null;
   const año = STATE.selYear;
+  const md = STATE.megaDealMode === 'sin' ? 'FALSO' : null;
+  const mdLabel = STATE.megaDealMode === 'sin' ? 'No' : 'Todas';
 
   /* ---- Sección 1: Forecast por Etapa y Mes ---- */
   const etapaMesDefs = [
     {
-      title: 'Cerrada Ganada (sin Mega Deals)',
-      filters: {tipo: TIPO_PRINCIPAL, megaDeal:'FALSO', etapa:'Cerrada Ganada', añoR: año},
-      desc: `Tipo=Estándar/Fast Track · Mega Deal=No · Etapa=Cerrada Ganada · Año R=${año}`
+      title: 'Cerrada Ganada',
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año},
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Ganada · Año R=${año}`
     },
     {
-      title: 'Cerrada Ganada · Digital Operations (sin Mega Deals)',
-      filters: {tipo: TIPO_PRINCIPAL, megaDeal:'FALSO', etapa:'Cerrada Ganada', añoR: año, deliveryVerticalSet: DO_LINEAS},
+      title: 'Cerrada Ganada · Digital Operations',
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año, deliveryVerticalSet: DO_LINEAS},
       desc: `Igual que arriba + Delivery Vertical = solo líneas "Digital Operations"`
     },
     {
-      title: 'Cerrada Perdida (todas, incl. Mega Deals)',
-      filters: {tipo: TIPO_PRINCIPAL, megaDeal:null, etapa:'Cerrada Perdida', añoR: año},
-      desc: `Tipo=Estándar/Fast Track · Mega Deal=Todas · Etapa=Cerrada Perdida · Año R=${año}`
+      title: 'Cerrada Perdida',
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Perdida', añoR: año},
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Perdida · Año R=${año}`
     },
     {
-      title: 'Pipe Abierto (sin Mega Deals)',
-      filters: {tipo: TIPO_PRINCIPAL, megaDeal:'FALSO', etapa: ETAPA_OPEN, añoR: año},
-      desc: `Tipo=Estándar/Fast Track · Mega Deal=No · Etapa=Prospección/Solución/Negociación/Cierre · Año R=${año}`
-    },
-    {
-      title: 'Pipe Abierto (con Mega Deals)',
-      filters: {tipo: TIPO_PRINCIPAL, megaDeal:null, etapa: ETAPA_OPEN, añoR: año},
-      desc: `Tipo=Estándar/Fast Track · Mega Deal=Todas · Etapa=Prospección/Solución/Negociación/Cierre · Año R=${año}`
+      title: 'Pipe Abierto',
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año},
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Prospección/Solución/Negociación/Cierre · Año R=${año}`
     }
   ];
   const panelsEtapaMes = document.getElementById('panelsEtapaMes');
@@ -563,7 +572,7 @@ function renderAll(){
   }).join('');
 
   /* ---- Sección 2: Pipe por Vertical ---- */
-  const vertFilters = {tipo: TIPO_PRINCIPAL, megaDeal:null, etapa: ETAPA_OPEN, añoR: año};
+  const vertFilters = {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año};
   const vertScoped = filterRows(rows, vertFilters);
   const vertRowOrder = [];
   for (const est of ESTATUS_ORDER) for (const v of VERTICAL_ORDER) vertRowOrder.push(est+' · '+v);
@@ -579,7 +588,7 @@ function renderAll(){
   const vertDelta = renderDeltaBadge(vertPivot.grand, prevGroup, rws=>filterRows(rws, vertFilters), r=>r.precioTotal);
   document.getElementById('panelVertical').innerHTML = panelHtml(
     `Pipe Abierto por Vertical · Año R=${año}`,
-    `Tipo=Estándar/Fast Track · Mega Deal=Todas · Etapa=Pipe Abierto · Delivery Vertical=Todas · Año R=${año}`,
+    `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Pipe Abierto · Delivery Vertical=Todas · Año R=${año}`,
     renderMesPivotTable(vertPivot),
     vertDelta
   );
@@ -592,8 +601,8 @@ function renderAll(){
     corteDate ? `Filas = Estatus · Columnas = Día de creación · Etapa Pipe Abierto · Mes/Año de creación = ${MESES[mesC-1]} ${añoC} (mes de la fecha de extracción seleccionada).`
               : 'No hay fecha de extracción para este corte — no se puede acotar al mes de creación.';
   const creacionDefs = [
-    {title:'Creación de Oportunidades — # (conteo)', filters:{tipo:TIPO_PRINCIPAL, megaDeal:'FALSO', etapa:ETAPA_OPEN, mesC, añoC}, countMode:true, valueFn:()=>1},
-    {title:'Creación de Oportunidades — $ (monto)', filters:{tipo:TIPO_PRINCIPAL, megaDeal:null, etapa:ETAPA_OPEN, mesC, añoC}, countMode:false, valueFn:r=>r.precioTotal}
+    {title:'Creación de Oportunidades — # (conteo)', filters:{tipo:TIPO_PRINCIPAL, megaDeal:md, etapa:ETAPA_OPEN, mesC, añoC}, countMode:true, valueFn:()=>1},
+    {title:'Creación de Oportunidades — $ (monto)', filters:{tipo:TIPO_PRINCIPAL, megaDeal:md, etapa:ETAPA_OPEN, mesC, añoC}, countMode:false, valueFn:r=>r.precioTotal}
   ];
   const panelsCreacion = document.getElementById('panelsCreacion');
   if (mesC == null){
@@ -608,7 +617,7 @@ function renderAll(){
         colSort: (a,b)=>a-b,
         valueFn: def.valueFn
       });
-      const desc = `Tipo=Estándar/Fast Track · Mega Deal=${def.filters.megaDeal==='FALSO'?'No':'Todas'} · Etapa=Pipe Abierto · Mes C=${mesC} · Año C=${añoC}`;
+      const desc = `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Pipe Abierto · Mes C=${mesC} · Año C=${añoC}`;
       const delta = renderDeltaBadge(pivot.grand, prevGroup, rws=>filterRows(rws, def.filters), def.valueFn);
       return panelHtml(def.title, desc, renderDiaPivotTable(pivot, {countMode: def.countMode}), def.countMode ? '' : delta);
     }).join('');
@@ -710,6 +719,12 @@ function renderControls(){
   ).join('');
   dateTabs.querySelectorAll('button').forEach(b=>{
     b.addEventListener('click', ()=>{ STATE.selDateIdx = Number(b.dataset.idx); renderControls(); renderAll(); });
+  });
+
+  const mdToggle = document.getElementById('mdToggle');
+  mdToggle.querySelectorAll('button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.val === STATE.megaDealMode);
+    b.onclick = ()=>{ STATE.megaDealMode = b.dataset.val; renderControls(); renderAll(); };
   });
 
   const yearTabs = document.getElementById('yearTabs');

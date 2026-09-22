@@ -115,6 +115,9 @@ en Excel; aquí siempre se recalculan con los datos más recientes del archivo).
    único corte — no hace falta preparar nada para la primera semana.
 4. El selector "Año R" aplica a todas las tablas de Forecast/Pipe/Perdida (por Fecha Real de
    Cierre), igual que en el workbook original donde cada año tiene su propio bloque de tablas.
+5. El selector **"Con Mega Deals" / "Sin Mega Deals"** aplica a todas las tarjetas que en el
+   workbook original existían dos veces (una con el filtro Mega Deal = No y otra con Mega Deal =
+   Todas) — así se revisa cualquiera de las dos vistas sin duplicar tarjetas en el tablero.
 
 ### Tablas replicadas y sus filtros
 
@@ -123,15 +126,14 @@ dinámica de origen). En resumen:
 
 | Tarjeta | Filas | Columnas | Filtros clave |
 |---|---|---|---|
-| Cerrada Ganada (sin Mega Deals) | Estatus | Mes R | Tipo Estándar/Fast Track · Mega Deal = No · Etapa = Cerrada Ganada |
+| Cerrada Ganada | Estatus | Mes R | Tipo Estándar/Fast Track · Mega Deal = selector Con/Sin · Etapa = Cerrada Ganada |
 | Cerrada Ganada · Digital Operations | Estatus | Mes R | Igual + Delivery Vertical solo líneas "Digital Operations" |
-| Cerrada Perdida | Estatus | Mes R | Mega Deal = Todas · Etapa = Cerrada Perdida |
-| Pipe Abierto (sin Mega Deals) | Estatus | Mes R | Mega Deal = No · Etapa = Prospección/Solución/Negociación/Cierre |
-| Pipe Abierto (con Mega Deals) | Estatus | Mes R | Mega Deal = Todas · mismas etapas abiertas |
-| Pipe Abierto por Vertical | Estatus × Vertical | Mes R | Mega Deal = Todas · Delivery Vertical = Todas |
-| Creación de Oportunidades # / $ | Estatus | Día de creación | Mes/Año de creación = mes de la Fecha de extracción del corte activo |
-| Venta Secundaria — Cerrada Ganada | Unidad de Comercial | Delivery Vertical/Línea de Servicios | Tipo = Secundaria (venta indirecta) · Etapa = Cerrada Ganada |
-| Mega Deals — Detalle | — (lista por oportunidad) | — | Mega Deal = Sí, agrupado por ID de oportunidad |
+| Cerrada Perdida | Estatus | Mes R | Mega Deal = selector Con/Sin · Etapa = Cerrada Perdida |
+| Pipe Abierto | Estatus | Mes R | Mega Deal = selector Con/Sin · Etapa = Prospección/Solución/Negociación/Cierre |
+| Pipe Abierto por Vertical | Estatus × Vertical | Mes R | Mega Deal = selector Con/Sin · Delivery Vertical = Todas |
+| Creación de Oportunidades # / $ | Estatus | Día de creación | Mega Deal = selector Con/Sin · Mes/Año de creación = mes de la Fecha de extracción del corte activo |
+| Venta Secundaria — Cerrada Ganada | Unidad de Comercial | Delivery Vertical/Línea de Servicios | Tipo = Secundaria (venta indirecta) · Etapa = Cerrada Ganada (sin filtro de Mega Deal en la tabla original) |
+| Mega Deals — Detalle | — (lista por oportunidad) | — | Mega Deal = Sí, agrupado por ID de oportunidad (no cambia con el selector Con/Sin — es la vista dedicada a Mega Deals) |
 
 En todas las tablas el valor es la **suma de "Precio total (convertido)"** por línea de producto
 (sin deduplicar por oportunidad, igual que la tabla dinámica origen), salvo en "Mega Deals" donde
