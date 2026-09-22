@@ -9,19 +9,19 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
-    --bg:#FFFFFF; --panel:#FFFFFF; --panel-2:#F2F4F8;
-    --border:#E1E5EC; --border-soft:#EDF0F5;
-    --text:#12151B; --text-dim:#5B6472; --text-faint:#9AA2B1;
-    --accent:#1F5DF5; --accent-dim:#DCE6FE; --accent-glow: rgba(31,93,245,0.08);
-    --good:#1D9A63; --warn:#C4820A; --bad:#E14C3D;
+    --bg:#F7F6F2; --panel:#FFFFFF; --panel-2:#F1EEE6;
+    --border:#D9D4C6; --border-soft:#E7E3D8;
+    --text:#16212E; --text-dim:#565B62; --text-faint:#8D8A80;
+    --accent:#15335A; --accent-2:#8A6A2E; --accent-dim:#D7DEE7; --accent-glow: rgba(21,51,90,0.07);
+    --good:#1E7A47; --warn:#8A6100; --bad:#A8342A;
     --radius:10px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
     background:
-      radial-gradient(1200px 600px at 15% -10%, rgba(31,93,245,0.05), transparent 60%),
-      radial-gradient(900px 500px at 100% 0%, rgba(8,145,168,0.04), transparent 55%),
+      radial-gradient(1200px 600px at 15% -10%, rgba(21,51,90,0.05), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(138,106,46,0.04), transparent 55%),
       var(--bg);
     color:var(--text); font-family:'Roboto',Arial,system-ui,sans-serif;
     -webkit-font-smoothing:antialiased; min-height:100vh;
@@ -77,12 +77,13 @@
     background:var(--panel-2); border:1px solid var(--border); border-radius:7px;
     padding:7px 12px; cursor:pointer; transition:border-color .15s;
   }
-  .seg button.active{background:var(--accent); color:#FFFFFF; border-color:var(--accent);}
-  .seg button:hover:not(.active){border-color:var(--accent);}
+  .seg button.active{background:var(--accent); color:#FFFFFF; border-color:var(--accent); box-shadow:0 1px 4px rgba(21,51,90,0.25);}
+  .seg button:hover:not(.active){border-color:var(--accent); color:var(--accent);}
   .seg.dates button{
     padding:8px 16px; border-radius:8px; border-width:1.5px; font-weight:700;
   }
   .seg.dates button:not(.active){box-shadow:0 1px 2px rgba(16,24,40,0.04);}
+  .seg.dates button.active{background:var(--accent-2); border-color:var(--accent-2); box-shadow:0 1px 4px rgba(138,106,46,0.3);}
   .controls-right{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
   .control-group{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
   .control-label{font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap;}
@@ -105,12 +106,15 @@
   .panel-empty{font-size:12.5px; color:var(--text-faint); padding:14px 0;}
 
   table{width:100%; border-collapse:collapse; font-size:11.5px;}
-  th{text-align:right; font-weight:500; color:var(--text-faint); padding:5px 6px; font-family:'IBM Plex Mono'; font-size:10.5px; border-bottom:1px solid var(--border-soft);}
+  th{text-align:right; font-weight:600; color:var(--text-dim); padding:5px 6px 8px; font-family:'IBM Plex Mono'; font-size:10.5px; border-bottom:2px solid var(--accent); text-transform:uppercase; letter-spacing:0.3px;}
   th:first-child, td:first-child{text-align:left;}
   td{text-align:right; padding:5px 6px; font-family:'IBM Plex Mono'; color:var(--text-dim); border-top:1px solid var(--border-soft);}
   td:first-child{color:var(--text); font-family:'Roboto'; font-weight:500; font-size:11.5px;}
-  tr.total-row td{color:var(--text); font-weight:600; border-top:1px solid var(--border); background:var(--panel-2);}
-  tr.year-row td{color:var(--accent); font-weight:700; background:var(--accent-glow); border-top:1px solid var(--border);}
+  tbody tr:hover td{background:var(--panel-2);}
+  tr.total-row td{color:var(--text); font-weight:700; border-top:2px solid var(--accent); background:var(--accent-dim);}
+  tr.total-row:hover td{background:var(--accent-dim);}
+  tr.year-row td{color:var(--accent-2); font-weight:700; background:rgba(138,106,46,0.10); border-top:1px solid var(--border);}
+  tr.year-row:hover td{background:rgba(138,106,46,0.10);}
   .table-scroll{overflow-x:auto;}
   .table-scroll-tall{max-height:480px; overflow-y:auto;}
 
