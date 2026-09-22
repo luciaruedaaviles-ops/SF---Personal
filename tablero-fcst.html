@@ -96,6 +96,8 @@
 
   .panel-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px;}
   @media(max-width:1000px){.panel-grid{grid-template-columns:1fr;}}
+  .two-col{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px;}
+  @media(max-width:1000px){.two-col{grid-template-columns:1fr;}}
   .panel{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px 18px 16px; box-shadow:0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.05); min-width:0;}
   .panel-title{font-family:'Kumbh Sans'; font-weight:600; font-size:14px; margin:0 0 4px;}
   .panel-filters{font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-faint); line-height:1.6; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--border-soft);}
@@ -117,6 +119,15 @@
   tr.year-row:hover td{background:rgba(138,106,46,0.10);}
   .table-scroll{overflow-x:auto;}
   .table-scroll-tall{max-height:480px; overflow-y:auto;}
+
+  .barlist-row{padding:8px 0; border-bottom:1px solid var(--border-soft);}
+  .barlist-row:last-child{border-bottom:none;}
+  .barlist-row-top{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+  .barlist-row-name{font-size:12px; font-weight:600; color:var(--text); line-height:1.4;}
+  .barlist-row-val{font-family:'IBM Plex Mono'; font-size:12px; font-weight:700; flex:none; white-space:nowrap; color:var(--text);}
+  .barlist-row-meta{font-size:10.5px; color:var(--text-faint); font-family:'IBM Plex Mono'; margin-top:1px;}
+  .barlist-row-track{height:8px; border-radius:4px; background:var(--panel-2); margin-top:6px; overflow:hidden;}
+  .barlist-row-fill{height:100%; border-radius:4px; background:var(--accent);}
 
   .footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--border-soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
   .footer-text{font-size:11.5px; color:var(--text-faint); font-family:'IBM Plex Mono';}
@@ -192,6 +203,7 @@
       </div>
       <div class="panel-grid" id="panelsEtapaMes"></div>
       <div id="panelPerdidaDetalle" style="margin-top:16px;"></div>
+      <div id="panelPerdidaMotivos" style="margin-top:16px;"></div>
     </div>
 
     <div class="section" id="sec2">
@@ -292,6 +304,7 @@ const STATE = {
   selMesC: null,   // null = usar el mes de la Fecha de extracción del corte activo
   selEstatusVert: 'Todas',   // filtro de Estatus para Pipe Abierto por Vertical
   selMesPerdida: 'Todos',   // filtro de Mes R para Cerrada Perdida — Detalle por línea
+  selVerticalPerdida: 'Todas',   // filtro de Vertical para Motivo/Razón de Pérdida
   snapshotDate: null,
   reportFilters: []
 };
@@ -404,6 +417,8 @@ function parsePipe(wb){
       estatus: String(get(row,'Estatus') || '').trim(),
       fechaCreacion: parseDMY(get(row,'Fecha de creación')),
       fechaEstimadaCierre: parseDMY(get(row,'Fecha Estimada de Cierre')),
+      motivoPerdida: String(get(row,'Perdida') || '').trim(),
+      razonPerdida: String(get(row,'Razón Perdida') || '').trim(),
       diaC: Number(get(row,'Dia C')) || null,
       mesC: Number(get(row,'Mes C')) || null,
       añoC: Number(get(row,'Año  C')) || null,
@@ -625,6 +640,40 @@ function renderAll(){
     b.addEventListener('click', ()=>{ STATE.selMesPerdida = b.dataset.m === 'Todos' ? 'Todos' : Number(b.dataset.m); renderAll(); });
   });
 
+  const verticalPerdidaOptions = ['Todas', ...VERTICAL_ORDER];
+  const perdidaMotivosRows = STATE.selVerticalPerdida === 'Todas' ? perdidaDetailRows : perdidaDetailRows.filter(r=>r.vertical===STATE.selVerticalPerdida);
+  const motivoItems = buildBarList(perdidaMotivosRows, {getKey:r=>r.motivoPerdida, valueFn:r=>r.precioTotal});
+  const razonItems = buildBarList(perdidaMotivosRows, {getKey:r=>r.razonPerdida, valueFn:r=>r.precioTotal});
+  const verticalPerdidaTabsHtml = verticalPerdidaOptions.map(v=>
+    `<button data-v="${v}" class="${v===STATE.selVerticalPerdida?'active':''}">${v}</button>`
+  ).join('');
+  document.getElementById('panelPerdidaMotivos').innerHTML = `<div class="section-head" style="margin-bottom:14px;">
+      <div>
+        <div class="section-eyebrow">Análisis · Columnas AC y AJ de "Pipe con productos FCST"</div>
+        <h2 class="section-title" style="font-size:16px;">Motivo y Razón de Pérdida por Vertical</h2>
+      </div>
+      <div class="section-note">Mismo filtro que "Cerrada Perdida — Detalle por línea" de arriba (Tipo, Mega Deal, Año R, Mes R), acotado a una Vertical a la vez para poder analizarla bien.</div>
+    </div>
+    <div class="control-group" style="margin-bottom:14px;">
+      <span class="control-label">Vertical</span>
+      <div class="seg" id="verticalPerdidaTabs">${verticalPerdidaTabsHtml}</div>
+    </div>
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-title">Motivo de Pérdida (columna AC)</div>
+        <div class="panel-filters">Vertical=${STATE.selVerticalPerdida} · Valor = Suma de Precio total (convertido)</div>
+        ${renderBarList(motivoItems)}
+      </div>
+      <div class="panel">
+        <div class="panel-title">Razón Perdida (columna AJ)</div>
+        <div class="panel-filters">Vertical=${STATE.selVerticalPerdida} · Valor = Suma de Precio total (convertido)</div>
+        <div class="table-scroll-tall">${renderBarList(razonItems)}</div>
+      </div>
+    </div>`;
+  document.getElementById('verticalPerdidaTabs').querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{ STATE.selVerticalPerdida = b.dataset.v; renderAll(); });
+  });
+
   /* ---- Sección 2: Pipe por Vertical ---- */
   const estatusVertTabs = document.getElementById('estatusVertTabs');
   const estatusVertOptions = ['Todas', ...ESTATUS_ORDER];
@@ -778,16 +827,40 @@ function renderMesPivotColsText(pivot){
   return h;
 }
 
+function buildBarList(rows, {getKey, valueFn}){
+  const map = new Map();
+  for (const r of rows){
+    const k = getKey(r) || '(Sin razón registrada)';
+    if (!map.has(k)) map.set(k, {value:0, count:0});
+    const e = map.get(k);
+    e.value += valueFn(r);
+    e.count += 1;
+  }
+  return [...map.entries()].map(([name, e])=>({name, ...e})).sort((a,b)=>b.value-a.value);
+}
+function renderBarList(items){
+  if (!items.length) return '<div class="panel-empty">Sin líneas Cerrada Perdida para este filtro.</div>';
+  const max = Math.max(...items.map(i=>i.value), 1);
+  return items.map(i=>`<div class="barlist-row">
+    <div class="barlist-row-top">
+      <div class="barlist-row-name">${i.name}</div>
+      <div class="barlist-row-val">${fmtMoney(i.value)}</div>
+    </div>
+    <div class="barlist-row-meta">${i.count} oportunidad${i.count===1?'':'es'}</div>
+    <div class="barlist-row-track"><div class="barlist-row-fill" style="width:${(i.value/max*100).toFixed(1)}%"></div></div>
+  </div>`).join('');
+}
+
 function renderPerdidaDetailTable(rows){
   if (!rows.length) return '<div class="panel-empty">No hay líneas Cerrada Perdida para este filtro en el corte seleccionado.</div>';
   const sorted = [...rows].sort((a,b)=>b.precioTotal-a.precioTotal);
-  let h = '<div class="table-scroll table-scroll-tall"><table><thead><tr><th style="text-align:left">ID Oportunidad</th><th style="text-align:left">Cuenta</th><th style="text-align:left">Tema</th><th>Fecha Real de Cierre</th><th>Precio total (convertido)</th></tr></thead><tbody>';
+  let h = '<div class="table-scroll table-scroll-tall"><table><thead><tr><th style="text-align:left">ID Oportunidad</th><th style="text-align:left">Cuenta</th><th style="text-align:left">Tema</th><th style="text-align:left">Razón Perdida</th><th>Fecha Real de Cierre</th><th>Precio total (convertido)</th></tr></thead><tbody>';
   let grand = 0;
   for (const r of sorted){
     grand += r.precioTotal;
-    h += `<tr><td style="text-align:left">${fmtOppId(r.id)}</td><td style="text-align:left">${r.cuenta||'—'}</td><td style="text-align:left">${r.tema||'—'}</td><td>${fmtDateHuman(r.fechaCierre)}</td><td>${fmtMoney(r.precioTotal)}</td></tr>`;
+    h += `<tr><td style="text-align:left">${fmtOppId(r.id)}</td><td style="text-align:left">${r.cuenta||'—'}</td><td style="text-align:left">${r.tema||'—'}</td><td style="text-align:left">${r.razonPerdida||'—'}</td><td>${fmtDateHuman(r.fechaCierre)}</td><td>${fmtMoney(r.precioTotal)}</td></tr>`;
   }
-  h += `<tr class="total-row"><td colspan="4">Total general</td><td>${fmtMoney(grand)}</td></tr>`;
+  h += `<tr class="total-row"><td colspan="5">Total general</td><td>${fmtMoney(grand)}</td></tr>`;
   h += '</tbody></table></div>';
   return h;
 }
