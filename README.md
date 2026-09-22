@@ -130,13 +130,14 @@ dinámica de origen). En resumen:
 | Tarjeta | Filas | Columnas | Filtros clave |
 |---|---|---|---|
 | Cerrada Ganada | Estatus | Mes R | Tipo Estándar/Fast Track · Mega Deal = selector Con/Sin · Etapa = Cerrada Ganada |
-| Cerrada Ganada · Digital Operations | Estatus | Mes R | Igual + Delivery Vertical solo líneas "Digital Operations" |
+| Cerrada Ganada · Sin Soluciones de Vertical | Estatus | Mes R | Igual + Delivery Vertical excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities) |
 | Cerrada Perdida | Estatus | Mes R | Mega Deal = selector Con/Sin · Etapa = Cerrada Perdida |
+| Cerrada Perdida — Detalle | — (lista por línea, ID/Cuenta/Tema/Fecha Real de Cierre/Precio total) | — | Mismo filtro que "Cerrada Perdida", ordenado de mayor a menor por Precio total (convertido) |
 | Pipe Abierto | Estatus | Mes R | Mega Deal = selector Con/Sin · Etapa = Prospección/Solución/Negociación/Cierre |
-| Pipe Abierto por Vertical | Estatus × Vertical | Mes R | Mega Deal = selector Con/Sin · Delivery Vertical = Todas |
+| Pipe Abierto por Vertical | Vertical | Mes R | Mega Deal = selector Con/Sin · Estatus = selector propio (Todas/Comprometida/Probable/Indeterminada) · Delivery Vertical = Todas |
 | Creación de Oportunidades # / $ | Estatus | Día de creación | Mega Deal = selector Con/Sin · Mes/Año de creación = selector propio (por defecto, el mes de la Fecha de extracción del corte activo) |
 | Venta Secundaria — Cerrada Ganada | Unidad de Comercial | Delivery Vertical/Línea de Servicios | Tipo = Secundaria (venta indirecta) · Etapa = Cerrada Ganada (sin filtro de Mega Deal en la tabla original) |
-| Mega Deals — Detalle | — (lista por oportunidad) | — | Mega Deal = Sí, agrupado por ID de oportunidad (no cambia con el selector Con/Sin — es la vista dedicada a Mega Deals) |
+| Mega Deals — Detalle | — (lista por oportunidad, incluye Fecha de Creación y Fecha Estimada de Cierre) | — | Mega Deal = Sí, agrupado por ID de oportunidad (no cambia con el selector Con/Sin — es la vista dedicada a Mega Deals) |
 
 En todas las tablas el valor es la **suma de "Precio total (convertido)"** por línea de producto
 (sin deduplicar por oportunidad, igual que la tabla dinámica origen), salvo en "Mega Deals" donde

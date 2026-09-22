@@ -112,6 +112,7 @@
   tr.total-row td{color:var(--text); font-weight:600; border-top:1px solid var(--border); background:var(--panel-2);}
   tr.year-row td{color:var(--accent); font-weight:700; background:var(--accent-glow); border-top:1px solid var(--border);}
   .table-scroll{overflow-x:auto;}
+  .table-scroll-tall{max-height:480px; overflow-y:auto;}
 
   .footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--border-soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
   .footer-text{font-size:11.5px; color:var(--text-faint); font-family:'IBM Plex Mono';}
@@ -186,6 +187,7 @@
         <div class="section-note">Filas = Estatus · Columnas = Mes R (Fecha Real de Cierre) · Valor = Suma de Precio total (convertido). El filtro Con/Sin Mega Deals de arriba aplica a las 4 tarjetas. Solo se muestran los meses con al menos una línea (igual que la tabla dinámica).</div>
       </div>
       <div class="panel-grid" id="panelsEtapaMes"></div>
+      <div id="panelPerdidaDetalle" style="margin-top:16px;"></div>
     </div>
 
     <div class="section" id="sec2">
@@ -194,7 +196,11 @@
           <div class="section-eyebrow">Réplica · Tabla 8 de la hoja "TD"</div>
           <h2 class="section-title">Pipe Abierto por Vertical</h2>
         </div>
-        <div class="section-note">Filas = Estatus × Vertical · Columnas = Mes R. Incluye todas las Delivery Vertical/Línea de Servicios — Mega Deals según el filtro de arriba.</div>
+        <div class="section-note">Filas = Vertical · Columnas = Mes R. Incluye todas las Delivery Vertical/Línea de Servicios — Mega Deals según el filtro de arriba.</div>
+      </div>
+      <div class="control-group" style="margin-bottom:14px;">
+        <span class="control-label">Estatus</span>
+        <div class="seg" id="estatusVertTabs"></div>
       </div>
       <div id="panelVertical"></div>
     </div>
@@ -280,6 +286,7 @@ const STATE = {
   megaDealMode: 'con',   // 'con' | 'sin' — filtro global Con/Sin Mega Deals
   selAñoC: null,   // null = usar el año de la Fecha de extracción del corte activo
   selMesC: null,   // null = usar el mes de la Fecha de extracción del corte activo
+  selEstatusVert: 'Todas',   // filtro de Estatus para Pipe Abierto por Vertical
   snapshotDate: null,
   reportFilters: []
 };
@@ -391,6 +398,7 @@ function parsePipe(wb){
       añoR: Number(get(row,'Año R')) || null,
       estatus: String(get(row,'Estatus') || '').trim(),
       fechaCreacion: parseDMY(get(row,'Fecha de creación')),
+      fechaEstimadaCierre: parseDMY(get(row,'Fecha Estimada de Cierre')),
       diaC: Number(get(row,'Dia C')) || null,
       mesC: Number(get(row,'Mes C')) || null,
       añoC: Number(get(row,'Año  C')) || null,
@@ -555,9 +563,9 @@ function renderAll(){
       desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Ganada · Año R=${año}`
     },
     {
-      title: 'Cerrada Ganada · Digital Operations',
+      title: 'Cerrada Ganada · Sin Soluciones de Vertical',
       filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año, deliveryVerticalSet: DO_LINEAS},
-      desc: `Igual que arriba + Delivery Vertical = solo líneas "Digital Operations"`
+      desc: `Igual que arriba + Delivery Vertical = excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities)`
     },
     {
       title: 'Cerrada Perdida',
@@ -584,24 +592,47 @@ function renderAll(){
     return panelHtml(def.title, def.desc, renderMesPivotTable(pivot), delta);
   }).join('');
 
+  const perdidaDetailFilters = {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Perdida', añoR: año};
+  const perdidaDetailRows = filterRows(rows, perdidaDetailFilters);
+  const perdidaDetailTotal = sum(perdidaDetailRows, r=>r.precioTotal);
+  const perdidaDetailDelta = renderDeltaBadge(perdidaDetailTotal, prevGroup, rws=>filterRows(rws, perdidaDetailFilters), r=>r.precioTotal);
+  document.getElementById('panelPerdidaDetalle').innerHTML = panelHtml(
+    'Cerrada Perdida — Detalle por línea (mayor a menor)',
+    `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Perdida · Año R=${año}`,
+    renderPerdidaDetailTable(perdidaDetailRows),
+    perdidaDetailDelta
+  );
+
   /* ---- Sección 2: Pipe por Vertical ---- */
+  const estatusVertTabs = document.getElementById('estatusVertTabs');
+  const estatusVertOptions = ['Todas', ...ESTATUS_ORDER];
+  estatusVertTabs.innerHTML = estatusVertOptions.map(e=>
+    `<button data-e="${e}" class="${e===STATE.selEstatusVert?'active':''}">${e}</button>`
+  ).join('');
+  estatusVertTabs.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{ STATE.selEstatusVert = b.dataset.e; renderAll(); });
+  });
+
+  const estatusVert = STATE.selEstatusVert;
   const vertFilters = {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año};
-  const vertScoped = filterRows(rows, vertFilters);
-  const vertRowOrder = [];
-  for (const est of ESTATUS_ORDER) for (const v of VERTICAL_ORDER) vertRowOrder.push(est+' · '+v);
+  const vertScopedBase = filterRows(rows, vertFilters);
+  const vertScoped = estatusVert==='Todas' ? vertScopedBase : vertScopedBase.filter(r=>r.estatus===estatusVert);
   const vertPivot = buildPivot(vertScoped, {
-    rowOrder: vertRowOrder,
-    getRowKey: r=> (ESTATUS_ORDER.includes(r.estatus) && VERTICAL_ORDER.includes(r.vertical)) ? (r.estatus+' · '+r.vertical) : null,
+    rowOrder: VERTICAL_ORDER,
+    getRowKey: r=> VERTICAL_ORDER.includes(r.vertical) ? r.vertical : null,
     getColKey: r=>r.mesR,
     colSort: (a,b)=>a-b,
     valueFn: r=>r.precioTotal
   });
-  // solo mostrar combinaciones con datos, en orden Estatus > Vertical
-  vertPivot.rowOrder = vertRowOrder.filter(rk => vertPivot.rowTotals[rk] > 0);
-  const vertDelta = renderDeltaBadge(vertPivot.grand, prevGroup, rws=>filterRows(rws, vertFilters), r=>r.precioTotal);
+  vertPivot.rowOrder = VERTICAL_ORDER.filter(rk => vertPivot.rowTotals[rk] > 0);
+  const vertDeltaFilterFn = rws=>{
+    const base = filterRows(rws, vertFilters);
+    return estatusVert==='Todas' ? base : base.filter(r=>r.estatus===estatusVert);
+  };
+  const vertDelta = renderDeltaBadge(vertPivot.grand, prevGroup, vertDeltaFilterFn, r=>r.precioTotal);
   document.getElementById('panelVertical').innerHTML = panelHtml(
-    `Pipe Abierto por Vertical · Año R=${año}`,
-    `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Pipe Abierto · Delivery Vertical=Todas · Año R=${año}`,
+    `Pipe Abierto por Vertical · Estatus=${estatusVert} · Año R=${año}`,
+    `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Pipe Abierto · Estatus=${estatusVert} · Delivery Vertical=Todas · Año R=${año}`,
     renderMesPivotTable(vertPivot),
     vertDelta
   );
@@ -725,20 +756,34 @@ function renderMesPivotColsText(pivot){
   return h;
 }
 
+function renderPerdidaDetailTable(rows){
+  if (!rows.length) return '<div class="panel-empty">No hay líneas Cerrada Perdida para este filtro en el corte seleccionado.</div>';
+  const sorted = [...rows].sort((a,b)=>b.precioTotal-a.precioTotal);
+  let h = '<div class="table-scroll table-scroll-tall"><table><thead><tr><th style="text-align:left">ID Oportunidad</th><th style="text-align:left">Cuenta</th><th style="text-align:left">Tema</th><th>Fecha Real de Cierre</th><th>Precio total (convertido)</th></tr></thead><tbody>';
+  let grand = 0;
+  for (const r of sorted){
+    grand += r.precioTotal;
+    h += `<tr><td style="text-align:left">${fmtOppId(r.id)}</td><td style="text-align:left">${r.cuenta||'—'}</td><td style="text-align:left">${r.tema||'—'}</td><td>${fmtDateHuman(r.fechaCierre)}</td><td>${fmtMoney(r.precioTotal)}</td></tr>`;
+  }
+  h += `<tr class="total-row"><td colspan="4">Total general</td><td>${fmtMoney(grand)}</td></tr>`;
+  h += '</tbody></table></div>';
+  return h;
+}
+
 function renderMegaDealsTable(opps){
   if (!opps.length) return '<div class="panel-empty">No hay Mega Deals en este corte.</div>';
-  let h = '<div class="table-scroll"><table><thead><tr><th>Año R</th><th style="text-align:left">ID</th><th style="text-align:left">Tema</th><th style="text-align:left">Cuenta</th><th style="text-align:left">Vertical</th><th style="text-align:left">Etapa</th><th style="text-align:left">Estatus</th><th>Precio total</th></tr></thead><tbody>';
+  let h = '<div class="table-scroll"><table><thead><tr><th>Año R</th><th style="text-align:left">ID</th><th style="text-align:left">Tema</th><th style="text-align:left">Cuenta</th><th style="text-align:left">Vertical</th><th style="text-align:left">Etapa</th><th style="text-align:left">Estatus</th><th>Fecha de Creación</th><th>Fecha Estimada de Cierre</th><th>Precio total</th></tr></thead><tbody>';
   let curYear = null, yearTotal = 0, grand = 0;
   const flushYear = ()=>{
-    if (curYear != null) h += `<tr class="year-row"><td colspan="7">Total ${curYear}</td><td>${fmtMoney(yearTotal)}</td></tr>`;
+    if (curYear != null) h += `<tr class="year-row"><td colspan="9">Total ${curYear}</td><td>${fmtMoney(yearTotal)}</td></tr>`;
   };
   for (const o of opps){
     if (o.añoR !== curYear){ flushYear(); curYear = o.añoR; yearTotal = 0; }
     yearTotal += o.precioTotal; grand += o.precioTotal;
-    h += `<tr><td>${o.añoR||'—'}</td><td style="text-align:left">${o.id}</td><td style="text-align:left">${o.tema||'—'}</td><td style="text-align:left">${o.cuenta||'—'}</td><td style="text-align:left">${o.vertical||'—'}</td><td style="text-align:left">${o.etapa||'—'}</td><td style="text-align:left">${o.estatus||'—'}</td><td>${fmtMoney(o.precioTotal)}</td></tr>`;
+    h += `<tr><td>${o.añoR||'—'}</td><td style="text-align:left">${o.id}</td><td style="text-align:left">${o.tema||'—'}</td><td style="text-align:left">${o.cuenta||'—'}</td><td style="text-align:left">${o.vertical||'—'}</td><td style="text-align:left">${o.etapa||'—'}</td><td style="text-align:left">${o.estatus||'—'}</td><td>${fmtDateHuman(o.fechaCreacion)}</td><td>${fmtDateHuman(o.fechaEstimadaCierre)}</td><td>${fmtMoney(o.precioTotal)}</td></tr>`;
   }
   flushYear();
-  h += `<tr class="total-row"><td colspan="7">Total general</td><td>${fmtMoney(grand)}</td></tr>`;
+  h += `<tr class="total-row"><td colspan="9">Total general</td><td>${fmtMoney(grand)}</td></tr>`;
   h += '</tbody></table></div>';
   return h;
 }
