@@ -568,14 +568,14 @@ function renderAll(){
       desc: `Igual que arriba + Delivery Vertical = excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities)`
     },
     {
-      title: 'Cerrada Perdida',
-      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Perdida', añoR: año},
-      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Perdida · Año R=${año}`
-    },
-    {
       title: 'Pipe Abierto',
       filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año},
       desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Prospección/Solución/Negociación/Cierre · Año R=${año}`
+    },
+    {
+      title: 'Cerrada Perdida',
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Perdida', añoR: año},
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Perdida · Año R=${año}`
     }
   ];
   const panelsEtapaMes = document.getElementById('panelsEtapaMes');
@@ -597,7 +597,7 @@ function renderAll(){
   const perdidaDetailTotal = sum(perdidaDetailRows, r=>r.precioTotal);
   const perdidaDetailDelta = renderDeltaBadge(perdidaDetailTotal, prevGroup, rws=>filterRows(rws, perdidaDetailFilters), r=>r.precioTotal);
   document.getElementById('panelPerdidaDetalle').innerHTML = panelHtml(
-    'Cerrada Perdida — Detalle por línea (mayor a menor)',
+    'Cerrada Perdida — Detalle por línea',
     `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Perdida · Año R=${año}`,
     renderPerdidaDetailTable(perdidaDetailRows),
     perdidaDetailDelta
