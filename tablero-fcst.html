@@ -138,6 +138,12 @@
   .stackbar-item-name{font-size:13px; font-weight:600; color:var(--text);}
   .stackbar-item-meta{font-size:11px; color:var(--text-faint); font-family:'IBM Plex Mono'; margin-top:2px;}
 
+  .cambios-resumen{margin-top:16px; padding-top:16px; border-top:1px solid var(--border-soft);}
+  .cambios-resumen-title{font-family:'Kumbh Sans'; font-weight:600; font-size:13px; margin-bottom:8px; color:var(--text);}
+  .cambios-resumen ul{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:7px;}
+  .cambios-resumen li{font-size:12.5px; color:var(--text-dim); line-height:1.55;}
+  .cambios-resumen li b{color:var(--text);}
+
   .footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--border-soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
   .footer-text{font-size:11.5px; color:var(--text-faint); font-family:'IBM Plex Mono';}
   .footer-filters{margin-top:24px; font-size:11px; color:var(--text-faint); line-height:1.7; background:var(--panel-2); border-radius:10px; padding:14px 18px;}
@@ -852,7 +858,7 @@ function renderAll(){
     document.getElementById('panelCambios').innerHTML = panelHtml(
       `Cambios detectados (${changes.length})`,
       `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · ${group.label} vs. ${prevGroup.label}`,
-      renderCambiosTable(changes),
+      renderCambiosTable(changes) + renderCambiosResumen(changes),
       ''
     );
   }
@@ -993,6 +999,62 @@ function renderCambiosTable(changes){
   }
   h += '</tbody></table></div>';
   return h;
+}
+
+function renderCambiosResumen(changes){
+  if (!changes.length) return '';
+
+  let precioUp = 0, precioDown = 0, precioUpCount = 0, precioDownCount = 0, biggestUp = null, biggestDown = null;
+  for (const c of changes){
+    if (!c.chg.precio) continue;
+    const diff = c.chg.precio.to - c.chg.precio.from;
+    if (diff > 0){ precioUp += diff; precioUpCount++; if (!biggestUp || diff > biggestUp.diff) biggestUp = {...c, diff}; }
+    else if (diff < 0){ precioDown += diff; precioDownCount++; if (!biggestDown || diff < biggestDown.diff) biggestDown = {...c, diff}; }
+  }
+  const precioNet = precioUp + precioDown;
+
+  const fechaYearChanges = changes.filter(c=>{
+    if (!c.chg.fechaCierre || !c.chg.fechaCierre.from || !c.chg.fechaCierre.to) return false;
+    return c.chg.fechaCierre.from.getUTCFullYear() !== c.chg.fechaCierre.to.getUTCFullYear();
+  });
+  const toNextYear = fechaYearChanges.filter(c=>c.chg.fechaCierre.to.getUTCFullYear() > c.chg.fechaCierre.from.getUTCFullYear()).length;
+  const toPrevYear = fechaYearChanges.length - toNextYear;
+
+  const nuevasPerdidas = changes.filter(c=>c.chg.etapa && c.chg.etapa.to === 'Cerrada Perdida');
+  const nuevasPerdidasTotal = sum(nuevasPerdidas, r=>r.precioTotal);
+
+  const estatusChanges = changes.filter(c=>c.chg.estatus);
+  const transMap = new Map();
+  for (const c of estatusChanges){
+    const k = `${c.chg.estatus.from||'—'} → ${c.chg.estatus.to||'—'}`;
+    transMap.set(k, (transMap.get(k)||0)+1);
+  }
+  const topTrans = [...transMap.entries()].sort((a,b)=>b[1]-a[1])[0];
+
+  const items = [];
+
+  items.push(precioUpCount+precioDownCount
+    ? `<b>Precio total (convertido):</b> ${precioUpCount+precioDownCount} oportunidades cambiaron de monto (${precioUpCount} subieron, ${precioDownCount} bajaron) · variación neta ${precioNet>=0?'+':''}${fmtMoney(precioNet)}`
+      + (biggestUp ? ` · mayor alza: ${fmtOppId(biggestUp.id)} ${biggestUp.cuenta||''} (+${fmtMoney(biggestUp.diff)})` : '')
+      + (biggestDown ? ` · mayor baja: ${fmtOppId(biggestDown.id)} ${biggestDown.cuenta||''} (${fmtMoney(biggestDown.diff)})` : '') + '.'
+    : `<b>Precio total (convertido):</b> sin cambios de monto en este periodo.`);
+
+  items.push(fechaYearChanges.length
+    ? `<b>Fecha Real de Cierre:</b> ${fechaYearChanges.length} oportunidades movieron su cierre a otro año (${toNextYear} a un año posterior, ${toPrevYear} a uno anterior).`
+    : `<b>Fecha Real de Cierre:</b> ninguna oportunidad cambió de año en su Fecha Real de Cierre.`);
+
+  items.push(nuevasPerdidas.length
+    ? `<b>Etapa:</b> ${nuevasPerdidas.length} oportunidades pasaron a Cerrada Perdida en este periodo, por ${fmtMoney(nuevasPerdidasTotal)}.`
+    : `<b>Etapa:</b> ninguna oportunidad pasó a Cerrada Perdida en este periodo.`);
+
+  items.push(estatusChanges.length
+    ? `<b>Estatus:</b> ${estatusChanges.length} oportunidades cambiaron de Estatus` + (topTrans ? `, el movimiento más frecuente fue ${topTrans[0]} (${topTrans[1]})` : '') + '.'
+    : `<b>Estatus:</b> ninguna oportunidad cambió de Estatus.`);
+
+  return `<div class="cambios-resumen">
+    <div class="cambios-resumen-title">Resumen</div>
+    <ul>${items.map(t=>`<li>${t}</li>`).join('')}</ul>
+  </div>`;
 }
 
 /* ============================================================

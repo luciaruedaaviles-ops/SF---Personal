@@ -162,6 +162,15 @@ justamente los cambios de etapa/año) y compara, por oportunidad, **Precio total
 donde cambió al menos uno de esos cuatro campos, mostrando "valor anterior → valor actual" (y el
 delta en el caso del precio) — una auditoría rápida de qué se movió de una semana a la otra.
 
+Al pie de esa tabla hay un **Resumen** en texto con lo más relevante de cada campo:
+- **Precio total (convertido)**: cuántas oportunidades subieron/bajaron de monto, la variación neta
+  y la mayor alza/baja individual.
+- **Fecha Real de Cierre**: solo cuenta los cambios que movieron la oportunidad a **otro año**
+  (ignora corrimientos de fecha dentro del mismo año).
+- **Etapa**: solo cuenta las oportunidades que pasaron a **Cerrada Perdida** en este periodo, con
+  su monto total.
+- **Estatus**: cuántas oportunidades cambiaron de Estatus y cuál fue el movimiento más frecuente.
+
 ### Estructura
 
 Igual que `index.html`: un único archivo HTML con CSS y JS inline, [SheetJS](https://sheetjs.com/)
