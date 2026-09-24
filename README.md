@@ -121,6 +121,8 @@ en Excel; aquí siempre se recalculan con los datos más recientes del archivo).
 6. En "Creación de Oportunidades" puedes elegir **Año y Mes de la Fecha de Creación** con sus
    propios botones (independientes de la Fecha de extracción) — por defecto usan el mes/año del
    corte activo; el botón "Usar mes del corte" vuelve a ese valor automático en cualquier momento.
+   El botón **"Total"** junto a los meses quita el filtro de mes y muestra los 12 meses del año
+   elegido, con columnas por Mes de creación en vez de por Día.
 
 ### Tablas replicadas y sus filtros
 
@@ -137,7 +139,7 @@ dinámica de origen). En resumen:
 | Razón Perdida (col. AJ) | Ranking horizontal por Vertical (selector propio) | — | Mismo filtro que arriba; % y Suma de Precio total (convertido) por razón, con conteo de oportunidades |
 | Pipe Abierto | Estatus | Mes R | Mega Deal = selector Con/Sin · Etapa = Prospección/Solución/Negociación/Cierre |
 | Pipe Abierto por Vertical | Vertical | Mes R | Mega Deal = selector Con/Sin · Estatus = selector propio (Todas/Comprometida/Probable/Indeterminada) · Delivery Vertical = Todas |
-| Creación de Oportunidades # / $ | Estatus | Día de creación | Mega Deal = selector Con/Sin · Mes/Año de creación = selector propio (por defecto, el mes de la Fecha de extracción del corte activo) |
+| Creación de Oportunidades # / $ | Estatus | Día de creación (o Mes de creación si se elige "Total") | Mega Deal = selector Con/Sin · Mes/Año de creación = selector propio (por defecto, el mes de la Fecha de extracción del corte activo; "Total" = los 12 meses del año elegido) |
 | Venta Secundaria — Cerrada Ganada | Unidad de Comercial | Delivery Vertical/Línea de Servicios | Tipo = Secundaria (venta indirecta) · Etapa = Cerrada Ganada (sin filtro de Mega Deal en la tabla original) |
 | Mega Deals — Detalle | — (lista por oportunidad, incluye Fecha de Creación y Fecha Estimada de Cierre) | — | Mega Deal = Sí · Etapa = Prospección/Solución/Negociación/Cierre (Pipe Abierto, sin cerradas), agrupado por ID de oportunidad (no cambia con el selector Con/Sin — es la vista dedicada a Mega Deals) |
 

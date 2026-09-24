@@ -737,7 +737,10 @@ function renderAll(){
   const defaultAñoC = corteDate ? corteDate.getUTCFullYear() : null;
   const añoCOptions = [...new Set(rows.map(r=>r.añoC).filter(y=>y))].sort((a,b)=>a-b);
   const añoC = STATE.selAñoC != null ? STATE.selAñoC : (añoCOptions.includes(defaultAñoC) ? defaultAñoC : añoCOptions[añoCOptions.length-1]);
-  const mesC = STATE.selMesC != null ? STATE.selMesC : (defaultAñoC === añoC ? defaultMesC : null);
+  const mesSel = STATE.selMesC === 'Todos' ? 'Todos'
+    : STATE.selMesC != null ? STATE.selMesC
+    : (defaultAñoC === añoC ? defaultMesC : 'Todos');
+  const mesC = mesSel === 'Todos' ? null : mesSel;
 
   const añoCTabs = document.getElementById('añoCTabs');
   añoCTabs.innerHTML = añoCOptions.map(y=>
@@ -747,38 +750,42 @@ function renderAll(){
     b.addEventListener('click', ()=>{ STATE.selAñoC = Number(b.dataset.y); renderAll(); });
   });
   const mesCTabs = document.getElementById('mesCTabs');
-  mesCTabs.innerHTML = MESES.map((label,i)=>
-    `<button data-m="${i+1}" class="${(i+1)===mesC?'active':''}">${label}</button>`
-  ).join('');
+  mesCTabs.innerHTML = `<button data-m="Todos" class="${mesSel==='Todos'?'active':''}">Total</button>` +
+    MESES.map((label,i)=>
+      `<button data-m="${i+1}" class="${(i+1)===mesSel?'active':''}">${label}</button>`
+    ).join('');
   mesCTabs.querySelectorAll('button').forEach(b=>{
-    b.addEventListener('click', ()=>{ STATE.selMesC = Number(b.dataset.m); renderAll(); });
+    b.addEventListener('click', ()=>{ STATE.selMesC = b.dataset.m === 'Todos' ? 'Todos' : Number(b.dataset.m); renderAll(); });
   });
   document.getElementById('resetCreacionBtn').onclick = ()=>{ STATE.selAñoC = null; STATE.selMesC = null; renderAll(); };
 
   const usandoCorte = STATE.selAñoC == null && STATE.selMesC == null;
-  document.getElementById('creacionNote').textContent = mesC
-    ? `Filas = Estatus · Columnas = Día de creación · Etapa Pipe Abierto · Mes/Año de creación = ${MESES[mesC-1]} ${añoC}` + (usandoCorte ? ' (mes de la fecha de extracción del corte activo).' : ' (elegido con los botones de arriba).')
-    : 'No hay líneas con Fecha de Creación en ese año para este corte.';
+  document.getElementById('creacionNote').textContent = !añoCOptions.length
+    ? 'No hay líneas con Fecha de Creación para este corte.'
+    : mesC
+      ? `Filas = Estatus · Columnas = Día de creación · Etapa Pipe Abierto · Mes/Año de creación = ${MESES[mesC-1]} ${añoC}` + (usandoCorte ? ' (mes de la fecha de extracción del corte activo).' : ' (elegido con los botones de arriba).')
+      : `Filas = Estatus · Columnas = Mes de creación · Etapa Pipe Abierto · Año de creación = ${añoC} (total de los 12 meses).`;
   const creacionDefs = [
     {title:'Creación de Oportunidades — # (conteo)', filters:{tipo:TIPO_PRINCIPAL, megaDeal:md, etapa:ETAPA_OPEN, mesC, añoC}, countMode:true, valueFn:()=>1},
     {title:'Creación de Oportunidades — $ (monto)', filters:{tipo:TIPO_PRINCIPAL, megaDeal:md, etapa:ETAPA_OPEN, mesC, añoC}, countMode:false, valueFn:r=>r.precioTotal}
   ];
   const panelsCreacion = document.getElementById('panelsCreacion');
-  if (mesC == null){
-    panelsCreacion.innerHTML = '<div class="panel"><div class="panel-empty">Sin datos de Fecha de Creación para ese año/mes en este corte.</div></div>';
+  if (!añoCOptions.length){
+    panelsCreacion.innerHTML = '<div class="panel"><div class="panel-empty">No hay líneas con Fecha de Creación para este corte.</div></div>';
   } else {
     panelsCreacion.innerHTML = creacionDefs.map(def=>{
       const scoped = filterRows(rows, def.filters);
       const pivot = buildPivot(scoped, {
         rowOrder: ESTATUS_ORDER,
         getRowKey: r=>r.estatus,
-        getColKey: r=>r.diaC,
+        getColKey: mesC ? (r=>r.diaC) : (r=>r.mesC),
         colSort: (a,b)=>a-b,
         valueFn: def.valueFn
       });
-      const desc = `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Pipe Abierto · Mes C=${mesC} · Año C=${añoC}`;
+      const desc = `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Pipe Abierto · ` + (mesC ? `Mes C=${mesC} · Año C=${añoC}` : `Año C=${añoC} (total de los 12 meses)`);
       const delta = renderDeltaBadge(pivot.grand, prevGroup, rws=>filterRows(rws, def.filters), def.valueFn);
-      return panelHtml(def.title, desc, renderDiaPivotTable(pivot, {countMode: def.countMode}), def.countMode ? '' : delta);
+      const tableHtml = mesC ? renderDiaPivotTable(pivot, {countMode: def.countMode}) : renderMesPivotTable(pivot, {countMode: def.countMode});
+      return panelHtml(def.title, desc, tableHtml, def.countMode ? '' : delta);
     }).join('');
   }
 
