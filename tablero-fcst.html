@@ -265,7 +265,7 @@
         <div>
           <h2 class="section-title">Mega Deals — Detalle</h2>
         </div>
-        <div class="section-note">Solo Mega Deal/Big Deal = Verdadero, agrupado por oportunidad (una línea puede tener varios productos) y por Año R.</div>
+        <div class="section-note">Solo Mega Deal/Big Deal = Verdadero y Etapa Pipe Abierto (Prospección/Solución/Negociación/Cierre), agrupado por oportunidad (una línea puede tener varios productos) y por Año R.</div>
       </div>
       <div id="panelMegaDeals"></div>
     </div>
@@ -800,11 +800,11 @@ function renderAll(){
   );
 
   /* ---- Sección 5: Mega Deals ---- */
-  const mdFilters = {tipo: TIPO_PRINCIPAL, megaDeal:'TRUE'};
+  const mdFilters = {tipo: TIPO_PRINCIPAL, megaDeal:'TRUE', etapa: ETAPA_OPEN};
   const opps = [...dedupeOppsMap(filterRows(rows, mdFilters)).values()].sort((a,b)=>(a.añoR||0)-(b.añoR||0) || b.precioTotal-a.precioTotal);
   document.getElementById('panelMegaDeals').innerHTML = panelHtml(
     'Mega Deals — Detalle por oportunidad',
-    'Tipo=Estándar/Fast Track · Mega Deal=Sí (sin filtro de año ni etapa)',
+    'Tipo=Estándar/Fast Track · Mega Deal=Sí · Etapa=Prospección/Solución/Negociación/Cierre (sin filtro de año)',
     renderMegaDealsTable(opps),
     renderDeltaBadge(sum(opps,r=>r.precioTotal), prevGroup, rws=>{
       return [...dedupeOppsMap(filterRows(rws, mdFilters)).values()];

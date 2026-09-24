@@ -139,7 +139,7 @@ dinámica de origen). En resumen:
 | Pipe Abierto por Vertical | Vertical | Mes R | Mega Deal = selector Con/Sin · Estatus = selector propio (Todas/Comprometida/Probable/Indeterminada) · Delivery Vertical = Todas |
 | Creación de Oportunidades # / $ | Estatus | Día de creación | Mega Deal = selector Con/Sin · Mes/Año de creación = selector propio (por defecto, el mes de la Fecha de extracción del corte activo) |
 | Venta Secundaria — Cerrada Ganada | Unidad de Comercial | Delivery Vertical/Línea de Servicios | Tipo = Secundaria (venta indirecta) · Etapa = Cerrada Ganada (sin filtro de Mega Deal en la tabla original) |
-| Mega Deals — Detalle | — (lista por oportunidad, incluye Fecha de Creación y Fecha Estimada de Cierre) | — | Mega Deal = Sí, agrupado por ID de oportunidad (no cambia con el selector Con/Sin — es la vista dedicada a Mega Deals) |
+| Mega Deals — Detalle | — (lista por oportunidad, incluye Fecha de Creación y Fecha Estimada de Cierre) | — | Mega Deal = Sí · Etapa = Prospección/Solución/Negociación/Cierre (Pipe Abierto, sin cerradas), agrupado por ID de oportunidad (no cambia con el selector Con/Sin — es la vista dedicada a Mega Deals) |
 
 En todas las tablas el valor es la **suma de "Precio total (convertido)"** por línea de producto
 (sin deduplicar por oportunidad, igual que la tabla dinámica origen), salvo en "Mega Deals" donde
