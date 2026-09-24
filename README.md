@@ -150,6 +150,16 @@ Cada tarjeta además muestra, cuando hay al menos dos fechas de extracción carg
 del total general contra el corte anterior — la comparación que se necesita para una revisión
 cada 8 días.
 
+### Resumen de Cambios vs. Corte Anterior
+
+Al final del tablero, cuando hay al menos dos fechas de extracción cargadas: toma las
+oportunidades presentes en el corte activo y en el corte anterior (mismo filtro Tipo=Estándar/Fast
+Track y Mega Deal según el selector Con/Sin, sin filtro de año ni etapa — para no ocultar
+justamente los cambios de etapa/año) y compara, por oportunidad, **Precio total (convertido)**
+(sumado por línea), **Fecha Real de Cierre**, **Etapa** y **Estatus**. Solo lista las oportunidades
+donde cambió al menos uno de esos cuatro campos, mostrando "valor anterior → valor actual" (y el
+delta en el caso del precio) — una auditoría rápida de qué se movió de una semana a la otra.
+
 ### Estructura
 
 Igual que `index.html`: un único archivo HTML con CSS y JS inline, [SheetJS](https://sheetjs.com/)

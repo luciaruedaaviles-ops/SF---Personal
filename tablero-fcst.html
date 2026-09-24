@@ -270,6 +270,16 @@
       <div id="panelMegaDeals"></div>
     </div>
 
+    <div class="section" id="sec6">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Resumen de Cambios vs. Corte Anterior</h2>
+        </div>
+        <div class="section-note" id="cambiosNote">Oportunidades con cambios en Precio total (convertido), Fecha Real de Cierre, Etapa o Estatus entre el corte activo y el corte anterior.</div>
+      </div>
+      <div id="panelCambios"></div>
+    </div>
+
     <div class="footer">
       <div class="footer-text" id="footerCorte"></div>
       <div class="footer-text">Cálculo local en el navegador · sin envío de datos a servidores.</div>
@@ -341,6 +351,10 @@ function fmtDateHuman(d){
 function parseDMY(v){
   if (v == null || v === '') return null;
   if (v instanceof Date && !isNaN(v)) return v;
+  if (typeof v === 'number' && isFinite(v)){
+    // Serial de fecha de Excel (epoch 1899-12-30), como llega una celda con formato de fecha sin cellDates.
+    return new Date(Date.UTC(1899,11,30) + Math.round(v)*86400000);
+  }
   const m = String(v).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!m) return null;
   return new Date(Date.UTC(Number(m[3]), Number(m[2])-1, Number(m[1])));
@@ -787,25 +801,53 @@ function renderAll(){
 
   /* ---- Sección 5: Mega Deals ---- */
   const mdFilters = {tipo: TIPO_PRINCIPAL, megaDeal:'TRUE'};
-  const mdScoped = filterRows(rows, mdFilters);
-  const byOpp = new Map();
-  for (const r of mdScoped){
-    const key = fmtOppId(r.id);
-    if (!byOpp.has(key)) byOpp.set(key, {...r, id:key, precioTotal:0});
-    byOpp.get(key).precioTotal += r.precioTotal;
-  }
-  const opps = [...byOpp.values()].sort((a,b)=>(a.añoR||0)-(b.añoR||0) || b.precioTotal-a.precioTotal);
+  const opps = [...dedupeOppsMap(filterRows(rows, mdFilters)).values()].sort((a,b)=>(a.añoR||0)-(b.añoR||0) || b.precioTotal-a.precioTotal);
   document.getElementById('panelMegaDeals').innerHTML = panelHtml(
     'Mega Deals — Detalle por oportunidad',
     'Tipo=Estándar/Fast Track · Mega Deal=Sí (sin filtro de año ni etapa)',
     renderMegaDealsTable(opps),
     renderDeltaBadge(sum(opps,r=>r.precioTotal), prevGroup, rws=>{
-      const sc = filterRows(rws, mdFilters);
-      const m = new Map();
-      for (const r of sc){ const key = fmtOppId(r.id); m.set(key, (m.get(key)||0)+r.precioTotal); }
-      return [...m.entries()].map(([id,precioTotal])=>({precioTotal}));
+      return [...dedupeOppsMap(filterRows(rws, mdFilters)).values()];
     }, r=>r.precioTotal)
   );
+
+  /* ---- Sección 6: Resumen de Cambios vs. Corte Anterior ---- */
+  const cambiosFilters = {tipo: TIPO_PRINCIPAL, megaDeal: md};
+  const cambiosNoteEl = document.getElementById('cambiosNote');
+  if (!prevGroup){
+    cambiosNoteEl.textContent = `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Primer corte registrado — sin corte anterior para comparar.`;
+    document.getElementById('panelCambios').innerHTML = panelHtml(
+      'Cambios detectados',
+      `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel}`,
+      '<div class="panel-empty">Primer corte registrado — sin comparación disponible.</div>',
+      ''
+    );
+  } else {
+    const currentOppMap = dedupeOppsMap(filterRows(rows, cambiosFilters));
+    const prevOppMap = dedupeOppsMap(filterRows(prevGroup.rows, cambiosFilters));
+    const changes = [];
+    let common = 0;
+    for (const [id, cur] of currentOppMap){
+      const prev = prevOppMap.get(id);
+      if (!prev) continue;
+      common++;
+      const chg = {};
+      let any = false;
+      if (Math.abs(cur.precioTotal - prev.precioTotal) > 0.5){ chg.precio = {from: prev.precioTotal, to: cur.precioTotal}; any = true; }
+      if (dateKey(cur.fechaCierre) !== dateKey(prev.fechaCierre)){ chg.fechaCierre = {from: prev.fechaCierre, to: cur.fechaCierre}; any = true; }
+      if ((cur.etapa||'') !== (prev.etapa||'')){ chg.etapa = {from: prev.etapa, to: cur.etapa}; any = true; }
+      if ((cur.estatus||'') !== (prev.estatus||'')){ chg.estatus = {from: prev.estatus, to: cur.estatus}; any = true; }
+      if (any) changes.push({...cur, chg});
+    }
+    changes.sort((a,b)=> Math.abs(b.chg.precio ? b.chg.precio.to-b.chg.precio.from : 0) - Math.abs(a.chg.precio ? a.chg.precio.to-a.chg.precio.from : 0));
+    cambiosNoteEl.textContent = `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · ${group.label} vs. ${prevGroup.label} · ${common.toLocaleString('es-MX')} oportunidades en ambos cortes, ${changes.length.toLocaleString('es-MX')} con cambios`;
+    document.getElementById('panelCambios').innerHTML = panelHtml(
+      `Cambios detectados (${changes.length})`,
+      `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · ${group.label} vs. ${prevGroup.label}`,
+      renderCambiosTable(changes),
+      ''
+    );
+  }
 
   /* ---- Footer ---- */
   document.getElementById('footerCorte').textContent =
@@ -912,6 +954,35 @@ function renderMegaDealsTable(opps){
   }
   flushYear();
   h += `<tr class="total-row"><td colspan="9">Total general</td><td>${fmtMoney(grand)}</td></tr>`;
+  h += '</tbody></table></div>';
+  return h;
+}
+
+function dedupeOppsMap(rows){
+  const map = new Map();
+  for (const r of rows){
+    const key = fmtOppId(r.id);
+    if (!map.has(key)) map.set(key, {...r, id:key, precioTotal:0});
+    map.get(key).precioTotal += r.precioTotal;
+  }
+  return map;
+}
+
+function renderCambiosTable(changes){
+  if (!changes.length) return '<div class="panel-empty">Sin cambios detectados en estas oportunidades entre ambos cortes.</div>';
+  let h = '<div class="table-scroll table-scroll-tall"><table><thead><tr><th style="text-align:left">ID Oportunidad</th><th style="text-align:left">Cuenta</th><th style="text-align:left">Tema</th><th style="text-align:left">Precio total (convertido)</th><th style="text-align:left">Fecha Real de Cierre</th><th style="text-align:left">Etapa</th><th style="text-align:left">Estatus</th></tr></thead><tbody>';
+  for (const c of changes){
+    let precioCell = '—';
+    if (c.chg.precio){
+      const diff = c.chg.precio.to - c.chg.precio.from;
+      const sign = diff >= 0 ? '+' : '';
+      precioCell = `${fmtMoney(c.chg.precio.from)} → ${fmtMoney(c.chg.precio.to)} (${sign}${fmtMoney(diff)})`;
+    }
+    const fechaCell = c.chg.fechaCierre ? `${fmtDateHuman(c.chg.fechaCierre.from)} → ${fmtDateHuman(c.chg.fechaCierre.to)}` : '—';
+    const etapaCell = c.chg.etapa ? `${c.chg.etapa.from||'—'} → ${c.chg.etapa.to||'—'}` : '—';
+    const estatusCell = c.chg.estatus ? `${c.chg.estatus.from||'—'} → ${c.chg.estatus.to||'—'}` : '—';
+    h += `<tr><td style="text-align:left">${fmtOppId(c.id)}</td><td style="text-align:left">${c.cuenta||'—'}</td><td style="text-align:left">${c.tema||'—'}</td><td style="text-align:left">${precioCell}</td><td style="text-align:left">${fechaCell}</td><td style="text-align:left">${etapaCell}</td><td style="text-align:left">${estatusCell}</td></tr>`;
+  }
   h += '</tbody></table></div>';
   return h;
 }
