@@ -320,7 +320,7 @@ const STATE = {
   selAñoC: null,   // null = usar el año de la Fecha de extracción del corte activo
   selMesC: null,   // null = usar el mes de la Fecha de extracción del corte activo
   selEstatusVert: 'Todas',   // filtro de Estatus para Pipe Abierto por Vertical
-  selMesPerdida: 'Todos',   // filtro de Mes R para Cerrada Perdida — Detalle por línea
+  selMesPerdida: 'Todos',   // filtro de Mes R para Cerrada Perdida — Detalle por oportunidad
   selVerticalPerdida: 'Todas',   // filtro de Vertical para Motivo/Razón de Pérdida
   snapshotDate: null,
   reportFilters: []
@@ -647,14 +647,15 @@ function renderAll(){
   const perdidaMesTabsHtml = ['Todos', ...perdidaMesOptions].map(m=>
     `<button data-m="${m}" class="${m===STATE.selMesPerdida?'active':''}">${m==='Todos'?'Todos':MESES[m-1]}</button>`
   ).join('');
+  const perdidaDetailOpps = [...dedupeOppsMap(perdidaDetailRows).values()];
   document.getElementById('panelPerdidaDetalle').innerHTML = `<div class="panel">
-    <div class="panel-title">Cerrada Perdida — Detalle por línea</div>
-    <div class="panel-filters">Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Perdida · Año R=${año} · Mes R=${STATE.selMesPerdida}</div>
+    <div class="panel-title">Cerrada Perdida — Detalle por oportunidad</div>
+    <div class="panel-filters">Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Perdida · Año R=${año} · Mes R=${STATE.selMesPerdida} · Suma por ID Oportunidad (una oportunidad puede tener varias líneas de producto)</div>
     <div class="control-group" style="margin-bottom:12px;">
       <span class="control-label">Mes (Fecha Real de Cierre)</span>
       <div class="seg" id="perdidaMesTabs">${perdidaMesTabsHtml}</div>
     </div>
-    ${renderPerdidaDetailTable(perdidaDetailRows)}
+    ${renderPerdidaDetailTable(perdidaDetailOpps)}
     ${perdidaDetailDelta}
   </div>`;
   document.getElementById('perdidaMesTabs').querySelectorAll('button').forEach(b=>{
@@ -674,7 +675,7 @@ function renderAll(){
       <div>
         <h2 class="section-title" style="font-size:16px;">Motivo y Razón de Pérdida por Vertical</h2>
       </div>
-      <div class="section-note">Mismo filtro que "Cerrada Perdida — Detalle por línea" de arriba (Tipo, Mega Deal, Año R, Mes R), acotado a una Vertical a la vez para poder analizarla bien.</div>
+      <div class="section-note">Mismo filtro que "Cerrada Perdida — Detalle por oportunidad" de arriba (Tipo, Mega Deal, Año R, Mes R), acotado a una Vertical a la vez para poder analizarla bien.</div>
     </div>
     <div class="control-group" style="margin-bottom:14px;">
       <span class="control-label">Vertical</span>
@@ -927,7 +928,7 @@ function renderStackBar(items){
 }
 
 function renderPerdidaDetailTable(rows){
-  if (!rows.length) return '<div class="panel-empty">No hay líneas Cerrada Perdida para este filtro en el corte seleccionado.</div>';
+  if (!rows.length) return '<div class="panel-empty">No hay oportunidades Cerrada Perdida para este filtro en el corte seleccionado.</div>';
   const sorted = [...rows].sort((a,b)=>b.precioTotal-a.precioTotal);
   let h = '<div class="table-scroll table-scroll-tall"><table><thead><tr><th style="text-align:left">ID Oportunidad</th><th style="text-align:left">Cuenta</th><th style="text-align:left">Tema</th><th style="text-align:left">Razón Perdida</th><th>Fecha Real de Cierre</th><th>Precio total (convertido)</th></tr></thead><tbody>';
   let grand = 0;

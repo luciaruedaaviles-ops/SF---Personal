@@ -132,7 +132,7 @@ dinámica de origen). En resumen:
 | Cerrada Ganada | Estatus | Mes R | Tipo Estándar/Fast Track · Mega Deal = selector Con/Sin · Etapa = Cerrada Ganada |
 | Cerrada Ganada · Sin Soluciones de Vertical | Estatus | Mes R | Igual + Delivery Vertical excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities) |
 | Cerrada Perdida | Estatus | Mes R | Mega Deal = selector Con/Sin · Etapa = Cerrada Perdida |
-| Cerrada Perdida — Detalle | — (lista por línea, ID/Cuenta/Tema/Razón Perdida/Fecha Real de Cierre/Precio total) | — | Mismo filtro que "Cerrada Perdida" + Mes R = selector propio (Todos/Ene.../Dic, solo meses con datos), ordenado de mayor a menor por Precio total (convertido) |
+| Cerrada Perdida — Detalle por oportunidad | — (lista por oportunidad, ID/Cuenta/Tema/Razón Perdida/Fecha Real de Cierre/Precio total) | — | Mismo filtro que "Cerrada Perdida" + Mes R = selector propio (Todos/Ene.../Dic, solo meses con datos); Precio total sumado por ID Oportunidad (una oportunidad puede tener varias líneas de producto), ordenado de mayor a menor |
 | Motivo de Pérdida (col. AC) | Barra 100% apilada + leyenda, por Vertical (selector propio) | — | Mismo filtro que "Cerrada Perdida — Detalle" (Tipo, Mega Deal, Año R, Mes R) + Vertical = selector propio; % y Suma de Precio total (convertido) por motivo, con conteo de oportunidades. Colores fijos por motivo (nunca cambian con el filtro) |
 | Razón Perdida (col. AJ) | Ranking horizontal por Vertical (selector propio) | — | Mismo filtro que arriba; % y Suma de Precio total (convertido) por razón, con conteo de oportunidades |
 | Pipe Abierto | Estatus | Mes R | Mega Deal = selector Con/Sin · Etapa = Prospección/Solución/Negociación/Cierre |
