@@ -346,7 +346,7 @@ function fmtOppId(id){
 }
 function fmtDateHuman(d){
   if (!d) return '—';
-  return d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'});
+  return d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric', timeZone:'UTC'});
 }
 function parseDMY(v){
   if (v == null || v === '') return null;
