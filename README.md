@@ -110,6 +110,11 @@ en Excel; aquí siempre se recalculan con los datos más recientes del archivo).
    "Pipe con productos FCST" con la **fecha de extracción** de cada corte (la misma fecha para
    todas las filas de esa semana). El tablero detecta las fechas distintas en esa columna y arma
    una pestaña por corte — así puedes revisar el corte de hoy o volver a uno anterior cada 8 días.
+   Junto a esas pestañas, **"Comparar contra"** deja elegir explícitamente contra qué otro corte se
+   calculan todos los "vs. corte anterior" del tablero — por defecto es el corte cronológicamente
+   inmediato anterior (marcado "(anterior)"), pero si entre medio quedó un corte de prueba (o
+   cualquier corte que no quieras usar como base), puedes apuntar la comparación a cualquier otra
+   fecha cargada sin tener que borrar filas del archivo.
 3. Si la columna A todavía está vacía (como en un export normal de Salesforce), el tablero usa
    automáticamente la fecha de generación del reporte ("A partir de..." en el encabezado) como
    único corte — no hace falta preparar nada para la primera semana.

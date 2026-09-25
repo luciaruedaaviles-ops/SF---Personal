@@ -192,6 +192,10 @@
         <span class="control-label">Consultar por Fecha de Extracción (columna A)</span>
         <div class="seg dates" id="dateTabs"></div>
       </div>
+      <div class="control-group">
+        <span class="control-label">Comparar contra</span>
+        <div class="seg" id="compareTabs"></div>
+      </div>
       <div class="controls-right">
         <div class="control-group">
           <span class="control-label">Mega Deals</span>
@@ -321,6 +325,7 @@ const STATE = {
   dateGroups: [],   // [{key, label, date, rows}] ordenado desc
   years: [],
   selDateIdx: 0,
+  selCompareIdx: null,   // null = corte inmediato anterior (automático); si no, índice explícito en dateGroups
   selYear: null,
   megaDealMode: 'con',   // 'con' | 'sin' — filtro global Con/Sin Mega Deals
   selAñoC: null,   // null = usar el año de la Fecha de extracción del corte activo
@@ -366,6 +371,11 @@ function parseDMY(v){
   return new Date(Date.UTC(Number(m[3]), Number(m[2])-1, Number(m[1])));
 }
 function dateKey(d){ return d ? d.toISOString().slice(0,10) : null; }
+function getCompareIdx(){
+  const auto = STATE.selDateIdx + 1;
+  return (STATE.selCompareIdx != null && STATE.selCompareIdx !== STATE.selDateIdx && STATE.dateGroups[STATE.selCompareIdx])
+    ? STATE.selCompareIdx : auto;
+}
 
 /* ============================================================
    PARSING
@@ -597,7 +607,7 @@ function panelHtml(title, filtersDesc, bodyHtml, deltaHtml){
 function renderAll(){
   const group = STATE.dateGroups[STATE.selDateIdx];
   const rows = group.rows;
-  const prevGroup = STATE.dateGroups[STATE.selDateIdx+1] || null;
+  const prevGroup = STATE.dateGroups[getCompareIdx()] || null;
   const año = STATE.selYear;
   const md = STATE.megaDealMode === 'sin' ? 'FALSO' : null;
   const mdLabel = STATE.megaDealMode === 'sin' ? 'No' : 'Todas';
@@ -1066,7 +1076,19 @@ function renderControls(){
     `<button data-idx="${i}" class="${i===STATE.selDateIdx?'active':''}">${g.label}</button>`
   ).join('');
   dateTabs.querySelectorAll('button').forEach(b=>{
-    b.addEventListener('click', ()=>{ STATE.selDateIdx = Number(b.dataset.idx); renderControls(); renderAll(); });
+    b.addEventListener('click', ()=>{ STATE.selDateIdx = Number(b.dataset.idx); STATE.selCompareIdx = null; renderControls(); renderAll(); });
+  });
+
+  const compareTabs = document.getElementById('compareTabs');
+  const autoCompareIdx = STATE.selDateIdx + 1;
+  const effectiveCompareIdx = getCompareIdx();
+  compareTabs.innerHTML = STATE.dateGroups.map((g,i)=>{
+    if (i === STATE.selDateIdx) return '';
+    const label = g.label + (i===autoCompareIdx ? ' (anterior)' : '');
+    return `<button data-idx="${i}" class="${i===effectiveCompareIdx?'active':''}">${label}</button>`;
+  }).join('');
+  compareTabs.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{ STATE.selCompareIdx = Number(b.dataset.idx); renderControls(); renderAll(); });
   });
 
   const mdToggle = document.getElementById('mdToggle');
