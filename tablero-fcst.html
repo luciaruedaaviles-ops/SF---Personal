@@ -232,13 +232,13 @@
         <div>
           <h2 class="section-title">Pipe Abierto por Vertical</h2>
         </div>
-        <div class="section-note">Filas = Vertical · Columnas = Mes R. Incluye todas las Delivery Vertical/Línea de Servicios — Mega Deals según el filtro de arriba.</div>
+        <div class="section-note">Filas = Vertical · Columnas = Mes R · Mega Deals según el filtro de arriba. A la izquierda, todas las Delivery Vertical/Línea de Servicios; a la derecha, excluye las líneas de Soluciones de Vertical.</div>
       </div>
       <div class="control-group" style="margin-bottom:14px;">
         <span class="control-label">Estatus</span>
         <div class="seg" id="estatusVertTabs"></div>
       </div>
-      <div id="panelVertical"></div>
+      <div class="two-col" id="panelVertical"></div>
     </div>
 
     <div class="section" id="sec3">
@@ -726,28 +726,36 @@ function renderAll(){
   });
 
   const estatusVert = STATE.selEstatusVert;
-  const vertFilters = {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año};
-  const vertScopedBase = filterRows(rows, vertFilters);
-  const vertScoped = estatusVert==='Todas' ? vertScopedBase : vertScopedBase.filter(r=>r.estatus===estatusVert);
-  const vertPivot = buildPivot(vertScoped, {
-    rowOrder: VERTICAL_ORDER,
-    getRowKey: r=> VERTICAL_ORDER.includes(r.vertical) ? r.vertical : null,
-    getColKey: r=>r.mesR,
-    colSort: (a,b)=>a-b,
-    valueFn: r=>r.precioTotal
-  });
-  vertPivot.rowOrder = VERTICAL_ORDER.filter(rk => vertPivot.rowTotals[rk] > 0);
-  const vertDeltaFilterFn = rws=>{
-    const base = filterRows(rws, vertFilters);
-    return estatusVert==='Todas' ? base : base.filter(r=>r.estatus===estatusVert);
-  };
-  const vertDelta = renderDeltaBadge(vertPivot.grand, prevGroup, vertDeltaFilterFn, r=>r.precioTotal);
-  document.getElementById('panelVertical').innerHTML = panelHtml(
-    `Pipe Abierto por Vertical · Estatus=${estatusVert} · Año R=${año}`,
-    `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Pipe Abierto · Estatus=${estatusVert} · Delivery Vertical=Todas · Año R=${año}`,
-    renderMesPivotTable(vertPivot),
-    vertDelta
-  );
+  const vertPanelDefs = [
+    {
+      title: `Pipe Abierto por Vertical · Estatus=${estatusVert} · Año R=${año}`,
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año},
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Pipe Abierto · Estatus=${estatusVert} · Delivery Vertical=Todas · Año R=${año}`
+    },
+    {
+      title: `Pipe Abierto por Vertical · Sin Soluciones de Vertical · Estatus=${estatusVert} · Año R=${año}`,
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año, deliveryVerticalSet: DO_LINEAS},
+      desc: `Igual que arriba + Delivery Vertical = excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities)`
+    }
+  ];
+  document.getElementById('panelVertical').innerHTML = vertPanelDefs.map(def=>{
+    const vertScopedBase = filterRows(rows, def.filters);
+    const vertScoped = estatusVert==='Todas' ? vertScopedBase : vertScopedBase.filter(r=>r.estatus===estatusVert);
+    const vertPivot = buildPivot(vertScoped, {
+      rowOrder: VERTICAL_ORDER,
+      getRowKey: r=> VERTICAL_ORDER.includes(r.vertical) ? r.vertical : null,
+      getColKey: r=>r.mesR,
+      colSort: (a,b)=>a-b,
+      valueFn: r=>r.precioTotal
+    });
+    vertPivot.rowOrder = VERTICAL_ORDER.filter(rk => vertPivot.rowTotals[rk] > 0);
+    const vertDeltaFilterFn = rws=>{
+      const base = filterRows(rws, def.filters);
+      return estatusVert==='Todas' ? base : base.filter(r=>r.estatus===estatusVert);
+    };
+    const vertDelta = renderDeltaBadge(vertPivot.grand, prevGroup, vertDeltaFilterFn, r=>r.precioTotal);
+    return panelHtml(def.title, def.desc, renderMesPivotTable(vertPivot), vertDelta);
+  }).join('');
 
   /* ---- Sección 3: Creación de Oportunidades ---- */
   const corteDate = group.date;
