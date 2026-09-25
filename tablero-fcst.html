@@ -143,6 +143,8 @@
   .cambios-resumen ul{margin:0; padding-left:18px; display:flex; flex-direction:column; gap:7px;}
   .cambios-resumen li{font-size:12.5px; color:var(--text-dim); line-height:1.55;}
   .cambios-resumen li b{color:var(--text);}
+  .cambios-resumen-sublist{margin:6px 0 0; padding-left:16px; display:flex; flex-direction:column; gap:4px; list-style:disc;}
+  .cambios-resumen-sublist li{font-size:11.5px; color:var(--text-faint); font-family:'IBM Plex Mono'; line-height:1.4;}
 
   .footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--border-soft); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
   .footer-text{font-size:11.5px; color:var(--text-faint); font-family:'IBM Plex Mono';}
@@ -1027,8 +1029,12 @@ function renderCambiosResumen(changes){
     if (!c.chg.fechaCierre || !c.chg.fechaCierre.from || !c.chg.fechaCierre.to) return false;
     return c.chg.fechaCierre.from.getUTCFullYear() !== c.chg.fechaCierre.to.getUTCFullYear();
   });
-  const toNextYear = fechaYearChanges.filter(c=>c.chg.fechaCierre.to.getUTCFullYear() > c.chg.fechaCierre.from.getUTCFullYear()).length;
+  const toNextYearOpps = fechaYearChanges.filter(c=>c.chg.fechaCierre.to.getUTCFullYear() > c.chg.fechaCierre.from.getUTCFullYear());
+  const toNextYear = toNextYearOpps.length;
   const toPrevYear = fechaYearChanges.length - toNextYear;
+  const toNextYearListHtml = toNextYearOpps.length
+    ? `<ul class="cambios-resumen-sublist">${toNextYearOpps.map(c=>`<li>${c.tema||'—'} — ${fmtMoney(c.precioTotal)}</li>`).join('')}</ul>`
+    : '';
 
   const nuevasPerdidas = changes.filter(c=>c.chg.etapa && c.chg.etapa.to === 'Cerrada Perdida');
   const nuevasPerdidasTotal = sum(nuevasPerdidas, r=>r.precioTotal);
@@ -1050,7 +1056,7 @@ function renderCambiosResumen(changes){
     : `<b>Precio total (convertido):</b> sin cambios de monto en este periodo.`);
 
   items.push(fechaYearChanges.length
-    ? `<b>Fecha Real de Cierre:</b> ${fechaYearChanges.length} oportunidades movieron su cierre a otro año (${toNextYear} a un año posterior, ${toPrevYear} a uno anterior).`
+    ? `<b>Fecha Real de Cierre:</b> ${fechaYearChanges.length} oportunidades movieron su cierre a otro año (${toNextYear} a un año posterior, ${toPrevYear} a uno anterior).` + toNextYearListHtml
     : `<b>Fecha Real de Cierre:</b> ninguna oportunidad cambió de año en su Fecha Real de Cierre.`);
 
   items.push(nuevasPerdidas.length

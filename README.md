@@ -171,7 +171,8 @@ Al pie de esa tabla hay un **Resumen** en texto con lo más relevante de cada ca
 - **Precio total (convertido)**: cuántas oportunidades subieron/bajaron de monto, la variación neta
   y la mayor alza/baja individual.
 - **Fecha Real de Cierre**: solo cuenta los cambios que movieron la oportunidad a **otro año**
-  (ignora corrimientos de fecha dentro del mismo año).
+  (ignora corrimientos de fecha dentro del mismo año); debajo lista, una por una, las que se
+  movieron a un **año posterior** (Tema y Precio total convertido de cada una).
 - **Etapa**: solo cuenta las oportunidades que pasaron a **Cerrada Perdida** en este periodo, con
   su monto total.
 - **Estatus**: cuántas oportunidades cambiaron de Estatus y cuál fue el movimiento más frecuente.
