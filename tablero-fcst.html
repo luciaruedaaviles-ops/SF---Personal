@@ -88,6 +88,18 @@
   .control-group{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
   .control-label{font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap;}
 
+  .hoja-tabs-bar{padding:18px 0 0; margin-bottom:-2px;}
+  #hojaTabs{gap:4px;}
+  #hojaTabs button{
+    font-family:'Kumbh Sans'; font-size:13px; font-weight:600; color:var(--text-dim);
+    background:var(--panel-2); border:1px solid var(--border); border-bottom:none;
+    border-radius:8px 8px 0 0; padding:10px 18px 12px;
+  }
+  #hojaTabs button.active{background:var(--panel); color:var(--accent); border-color:var(--border); box-shadow:none; position:relative; z-index:1;}
+  #hojaTabs button.active::after{content:''; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--panel);}
+  #hojaTabs button:hover:not(.active){border-color:var(--accent); color:var(--accent);}
+  .hoja{border-top:1px solid var(--border); padding-top:2px;}
+
   .section{margin-top:44px;}
   .section-head{display:flex; align-items:baseline; justify-content:space-between; gap:14px; margin-bottom:14px; flex-wrap:wrap;}
   .section-eyebrow{font-family:'IBM Plex Mono'; font-size:11px; letter-spacing:1.8px; text-transform:uppercase; color:var(--accent);}
@@ -214,82 +226,116 @@
       </div>
     </div>
 
-    <div class="section" id="sec1">
-      <div class="section-head">
-        <div>
-          <div class="section-eyebrow">Réplica · Tablas 1-5 de la hoja "TD"</div>
-          <h2 class="section-title">Forecast por Etapa y Mes</h2>
-        </div>
-        <div class="section-note">Filas = Estatus · Columnas = Mes R (Fecha Real de Cierre) · Valor = Suma de Precio total (convertido). El filtro Con/Sin Mega Deals de arriba aplica a las 4 tarjetas. Solo se muestran los meses con al menos una línea (igual que la tabla dinámica).</div>
-      </div>
-      <div class="panel-grid" id="panelsEtapaMes"></div>
-      <div id="panelPerdidaDetalle" style="margin-top:16px;"></div>
-      <div id="panelPerdidaMotivos" style="margin-top:16px;"></div>
+    <div class="hoja-tabs-bar">
+      <div class="seg dates" id="hojaTabs"></div>
     </div>
 
-    <div class="section" id="sec2">
-      <div class="section-head">
-        <div>
-          <h2 class="section-title">Pipe Abierto por Vertical</h2>
+    <div class="hoja" data-hoja="1">
+      <div class="section" id="sec1">
+        <div class="section-head">
+          <div>
+            <div class="section-eyebrow">Réplica · Tablas 1-5 de la hoja "TD"</div>
+            <h2 class="section-title">Forecast por Etapa y Mes</h2>
+          </div>
+          <div class="section-note">Filas = Estatus · Columnas = Mes R (Fecha Real de Cierre) · Valor = Suma de Precio total (convertido). El filtro Con/Sin Mega Deals de arriba aplica a las 2 tarjetas. Solo se muestran los meses con al menos una línea (igual que la tabla dinámica).</div>
         </div>
-        <div class="section-note">Filas = Vertical · Columnas = Mes R · Mega Deals según el filtro de arriba. A la izquierda, todas las Delivery Vertical/Línea de Servicios; a la derecha, excluye las líneas de Soluciones de Vertical.</div>
+        <div class="panel-grid" id="panelsEtapaMes"></div>
       </div>
-      <div class="control-group" style="margin-bottom:14px;">
-        <span class="control-label">Estatus</span>
-        <div class="seg" id="estatusVertTabs"></div>
-      </div>
-      <div class="two-col" id="panelVertical"></div>
     </div>
 
-    <div class="section" id="sec3">
-      <div class="section-head">
-        <div>
-          <h2 class="section-title">Creación de Oportunidades</h2>
+    <div class="hoja" data-hoja="2" hidden>
+      <div class="section" id="secPipeAbierto">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Pipe Abierto</h2>
+          </div>
+          <div class="section-note">Filas = Estatus · Columnas = Mes R (Fecha Real de Cierre) · Valor = Suma de Precio total (convertido).</div>
         </div>
-        <div class="section-note" id="creacionNote">Filas = Estatus · Columnas = Día de creación (Fecha de Creación) · Solo Etapa Pipe Abierto.</div>
+        <div id="panelPipeAbierto"></div>
       </div>
-      <div class="controls" style="padding-top:0;">
-        <div class="control-group">
-          <span class="control-label">Año (Fecha de Creación)</span>
-          <div class="seg" id="añoCTabs"></div>
+
+      <div class="section" id="sec2">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Pipe Abierto por Vertical</h2>
+          </div>
+          <div class="section-note">Filas = Vertical · Columnas = Mes R · Mega Deals según el filtro de arriba. A la izquierda, todas las Delivery Vertical/Línea de Servicios; a la derecha, excluye las líneas de Soluciones de Vertical.</div>
         </div>
-        <div class="control-group">
-          <span class="control-label">Mes (Fecha de Creación)</span>
-          <div class="seg" id="mesCTabs"></div>
+        <div class="control-group" style="margin-bottom:14px;">
+          <span class="control-label">Estatus</span>
+          <div class="seg" id="estatusVertTabs"></div>
         </div>
-        <button class="btn" id="resetCreacionBtn">Usar mes del corte</button>
+        <div class="two-col" id="panelVertical"></div>
       </div>
-      <div class="panel-grid" id="panelsCreacion"></div>
     </div>
 
-    <div class="section" id="sec4">
-      <div class="section-head">
-        <div>
-          <h2 class="section-title">Venta Secundaria — Cerrada Ganada</h2>
+    <div class="hoja" data-hoja="3" hidden>
+      <div class="section" id="secCerradaPerdida">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Cerrada Perdida</h2>
+          </div>
+          <div class="section-note">Filas = Estatus · Columnas = Mes R (Fecha Real de Cierre) · Valor = Suma de Precio total (convertido).</div>
         </div>
-        <div class="section-note">Solo Tipo de registro "Secundaria" (venta indirecta) · Filas = Unidad de Comercial · Columnas = Delivery Vertical/Línea de Servicios.</div>
+        <div id="panelCerradaPerdida"></div>
+        <div id="panelPerdidaDetalle" style="margin-top:16px;"></div>
+        <div id="panelPerdidaMotivos" style="margin-top:16px;"></div>
       </div>
-      <div id="panelSecundarias"></div>
     </div>
 
-    <div class="section" id="sec5">
-      <div class="section-head">
-        <div>
-          <h2 class="section-title">Mega Deals — Detalle</h2>
+    <div class="hoja" data-hoja="4" hidden>
+      <div class="section" id="sec3">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Creación de Oportunidades</h2>
+          </div>
+          <div class="section-note" id="creacionNote">Filas = Estatus · Columnas = Día de creación (Fecha de Creación) · Solo Etapa Pipe Abierto.</div>
         </div>
-        <div class="section-note">Solo Mega Deal/Big Deal = Verdadero y Etapa Pipe Abierto (Prospección/Solución/Negociación/Cierre), agrupado por oportunidad (una línea puede tener varios productos) y por Año R.</div>
+        <div class="controls" style="padding-top:0;">
+          <div class="control-group">
+            <span class="control-label">Año (Fecha de Creación)</span>
+            <div class="seg" id="añoCTabs"></div>
+          </div>
+          <div class="control-group">
+            <span class="control-label">Mes (Fecha de Creación)</span>
+            <div class="seg" id="mesCTabs"></div>
+          </div>
+          <button class="btn" id="resetCreacionBtn">Usar mes del corte</button>
+        </div>
+        <div class="panel-grid" id="panelsCreacion"></div>
       </div>
-      <div id="panelMegaDeals"></div>
+
+      <div class="section" id="sec4">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Venta Secundaria — Cerrada Ganada</h2>
+          </div>
+          <div class="section-note">Solo Tipo de registro "Secundaria" (venta indirecta) · Filas = Unidad de Comercial · Columnas = Delivery Vertical/Línea de Servicios.</div>
+        </div>
+        <div id="panelSecundarias"></div>
+      </div>
     </div>
 
-    <div class="section" id="sec6">
-      <div class="section-head">
-        <div>
-          <h2 class="section-title">Resumen de Cambios vs. Corte Anterior</h2>
+    <div class="hoja" data-hoja="5" hidden>
+      <div class="section" id="sec5">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Mega Deals — Detalle</h2>
+          </div>
+          <div class="section-note">Solo Mega Deal/Big Deal = Verdadero y Etapa Pipe Abierto (Prospección/Solución/Negociación/Cierre), agrupado por oportunidad (una línea puede tener varios productos) y por Año R.</div>
         </div>
-        <div class="section-note" id="cambiosNote">Oportunidades con cambios en Precio total (convertido), Fecha Real de Cierre, Etapa o Estatus entre el corte activo y el corte anterior.</div>
+        <div id="panelMegaDeals"></div>
       </div>
-      <div id="panelCambios"></div>
+
+      <div class="section" id="sec6">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Resumen de Cambios vs. Corte Anterior</h2>
+          </div>
+          <div class="section-note" id="cambiosNote">Oportunidades con cambios en Precio total (convertido), Fecha Real de Cierre, Etapa o Estatus entre el corte activo y el corte anterior.</div>
+        </div>
+        <div id="panelCambios"></div>
+      </div>
     </div>
 
     <div class="footer">
@@ -327,6 +373,7 @@ const STATE = {
   dateGroups: [],   // [{key, label, date, rows}] ordenado desc
   years: [],
   selDateIdx: 0,
+  selHoja: 1,   // 1=Fcst por Etapa y Mes, 2=Pipe Abierto, 3=Cerrada Perdida, 4=Creación de Oportunidades, 5=Mega Deals
   selCompareIdx: null,   // null = corte inmediato anterior (automático); si no, índice explícito en dateGroups
   selYear: null,
   megaDealMode: 'con',   // 'con' | 'sin' — filtro global Con/Sin Mega Deals
@@ -615,30 +662,7 @@ function renderAll(){
   const mdLabel = STATE.megaDealMode === 'sin' ? 'No' : 'Todas';
 
   /* ---- Sección 1: Forecast por Etapa y Mes ---- */
-  const etapaMesDefs = [
-    {
-      title: 'Cerrada Ganada',
-      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año},
-      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Ganada · Año R=${año}`
-    },
-    {
-      title: 'Cerrada Ganada · Sin Soluciones de Vertical',
-      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año, deliveryVerticalSet: DO_LINEAS},
-      desc: `Igual que arriba + Delivery Vertical = excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities)`
-    },
-    {
-      title: 'Pipe Abierto',
-      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año},
-      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Prospección/Solución/Negociación/Cierre · Año R=${año}`
-    },
-    {
-      title: 'Cerrada Perdida',
-      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Perdida', añoR: año},
-      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Perdida · Año R=${año}`
-    }
-  ];
-  const panelsEtapaMes = document.getElementById('panelsEtapaMes');
-  panelsEtapaMes.innerHTML = etapaMesDefs.map(def=>{
+  function buildEtapaMesPanel(def){
     const scoped = filterRows(rows, def.filters);
     const pivot = buildPivot(scoped, {
       rowOrder: ESTATUS_ORDER,
@@ -649,7 +673,33 @@ function renderAll(){
     });
     const delta = renderDeltaBadge(pivot.grand, prevGroup, rws=>filterRows(rws, def.filters), r=>r.precioTotal);
     return panelHtml(def.title, def.desc, renderMesPivotTable(pivot), delta);
-  }).join('');
+  }
+
+  const etapaMesDefs = [
+    {
+      title: 'Cerrada Ganada',
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año},
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Ganada · Año R=${año}`
+    },
+    {
+      title: 'Cerrada Ganada · Sin Soluciones de Vertical',
+      filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año, deliveryVerticalSet: DO_LINEAS},
+      desc: `Igual que arriba + Delivery Vertical = excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities)`
+    }
+  ];
+  document.getElementById('panelsEtapaMes').innerHTML = etapaMesDefs.map(buildEtapaMesPanel).join('');
+
+  document.getElementById('panelPipeAbierto').innerHTML = buildEtapaMesPanel({
+    title: 'Pipe Abierto',
+    filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año},
+    desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Prospección/Solución/Negociación/Cierre · Año R=${año}`
+  });
+
+  document.getElementById('panelCerradaPerdida').innerHTML = buildEtapaMesPanel({
+    title: 'Cerrada Perdida',
+    filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Perdida', añoR: año},
+    desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Perdida · Año R=${año}`
+  });
 
   const perdidaDetailFilters = {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Perdida', añoR: año};
   const perdidaDetailAllRows = filterRows(rows, perdidaDetailFilters);
@@ -1084,7 +1134,21 @@ function renderCambiosResumen(changes){
 /* ============================================================
    CONTROLES
 ============================================================ */
+const HOJAS = ['Fcst por Etapa y Mes','Pipe Abierto','Cerrada Perdida','Creación de Oportunidades','Mega Deals'];
+function applyHojaVisibility(){
+  document.querySelectorAll('.hoja').forEach(el=>{
+    el.hidden = Number(el.dataset.hoja) !== STATE.selHoja;
+  });
+}
 function renderControls(){
+  const hojaTabs = document.getElementById('hojaTabs');
+  hojaTabs.innerHTML = HOJAS.map((label,i)=>
+    `<button data-hoja="${i+1}" class="${(i+1)===STATE.selHoja?'active':''}">${label}</button>`
+  ).join('');
+  hojaTabs.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{ STATE.selHoja = Number(b.dataset.hoja); renderControls(); applyHojaVisibility(); });
+  });
+
   const dateTabs = document.getElementById('dateTabs');
   dateTabs.innerHTML = STATE.dateGroups.map((g,i)=>
     `<button data-idx="${i}" class="${i===STATE.selDateIdx?'active':''}">${g.label}</button>`
@@ -1143,11 +1207,13 @@ function handleFile(file){
       STATE.snapshotDate = meta.snapshotDate;
       STATE.dateGroups = buildDateGroups(rows, meta);
       STATE.selDateIdx = 0;
+      STATE.selHoja = 1;
       STATE.years = [...new Set(rows.map(r=>r.añoR).filter(y=>y))].sort((a,b)=>a-b);
       STATE.selYear = STATE.years.includes(new Date().getUTCFullYear()) ? new Date().getUTCFullYear() : STATE.years[0];
       document.getElementById('dropScreen').classList.add('hidden');
       document.getElementById('dashboard').classList.remove('hidden');
       renderControls();
+      applyHojaVisibility();
       renderAll();
     } catch(err){
       showError(err.message || String(err));

@@ -103,6 +103,21 @@ las filas crudas de la hoja "Pipe con productos FCST" — no lee los valores ya 
 tablas dinámicas del Excel (esos valores quedan "congelados" desde el último `Actualizar todo`
 en Excel; aquí siempre se recalculan con los datos más recientes del archivo).
 
+### Hojas (pestañas)
+
+El contenido se organiza en 5 pestañas, como las hojas de un libro de Excel, justo debajo de los
+filtros globales (Fecha de extracción, Comparar contra, Mega Deals, Año R — esos aplican a las 5
+por igual). Solo es orden de navegación: ninguna tabla, filtro ni cálculo cambia de una hoja a
+otra.
+
+1. **Fcst por Etapa y Mes** — Cerrada Ganada, Cerrada Ganada · Sin Soluciones de Vertical.
+2. **Pipe Abierto** — Pipe Abierto, Pipe Abierto por Vertical.
+3. **Cerrada Perdida** — Cerrada Perdida, Cerrada Perdida — Detalle por oportunidad, Motivo y
+   Razón de Pérdida por Vertical.
+4. **Creación de Oportunidades** — Creación de Oportunidades (# y $), Venta Secundaria — Cerrada
+   Ganada.
+5. **Mega Deals** — Mega Deals — Detalle, Resumen de Cambios vs. Corte Anterior.
+
 ### Cómo usarlo
 
 1. Abre `tablero-fcst.html` en el navegador y sube el Excel de "Pipe con productos FCST".
