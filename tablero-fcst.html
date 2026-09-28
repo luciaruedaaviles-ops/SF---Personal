@@ -84,9 +84,13 @@
   }
   .seg.dates button:not(.active){box-shadow:0 1px 2px rgba(16,24,40,0.04);}
   .seg.dates button.active{background:var(--accent-2); border-color:var(--accent-2); box-shadow:0 1px 4px rgba(138,106,46,0.3);}
-  .controls-right{display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
   .control-group{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
   .control-label{font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap;}
+
+  .controls-secondary{padding:8px 0 14px; gap:18px; justify-content:flex-start; border-top:1px solid var(--border); opacity:0.82;}
+  .controls-secondary .control-label{font-size:9.5px;}
+  .controls-secondary .seg button{padding:5px 10px; font-size:11px;}
+  .controls-secondary .btn{padding:6px 12px; font-size:11.5px;}
 
   .hoja-tabs-bar{padding:18px 0 0; margin-bottom:-2px;}
   #hojaTabs{gap:4px;}
@@ -210,20 +214,21 @@
         <span class="control-label">Comparar contra</span>
         <div class="seg" id="compareTabs"></div>
       </div>
-      <div class="controls-right">
-        <div class="control-group">
-          <span class="control-label">Mega Deals</span>
-          <div class="seg" id="mdToggle">
-            <button data-val="con">Con Mega Deals</button>
-            <button data-val="sin">Sin Mega Deals</button>
-          </div>
+    </div>
+
+    <div class="controls controls-secondary">
+      <div class="control-group">
+        <span class="control-label">Mega Deals</span>
+        <div class="seg" id="mdToggle">
+          <button data-val="con">Con Mega Deals</button>
+          <button data-val="sin">Sin Mega Deals</button>
         </div>
-        <div class="control-group">
-          <span class="control-label">Año R (Fecha Real de Cierre)</span>
-          <div class="seg" id="yearTabs"></div>
-        </div>
-        <button class="btn" id="reloadBtn">Cargar otro archivo</button>
       </div>
+      <div class="control-group">
+        <span class="control-label">Año R</span>
+        <div class="seg" id="yearTabs"></div>
+      </div>
+      <button class="btn" id="reloadBtn">Cargar otro archivo</button>
     </div>
 
     <div class="hoja-tabs-bar">

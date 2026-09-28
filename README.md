@@ -106,9 +106,13 @@ en Excel; aquí siempre se recalculan con los datos más recientes del archivo).
 ### Hojas (pestañas)
 
 El contenido se organiza en 5 pestañas, como las hojas de un libro de Excel, justo debajo de los
-filtros globales (Fecha de extracción, Comparar contra, Mega Deals, Año R — esos aplican a las 5
-por igual). Solo es orden de navegación: ninguna tabla, filtro ni cálculo cambia de una hoja a
-otra.
+filtros globales — esos aplican a las 5 por igual. Solo es orden de navegación: ninguna tabla,
+filtro ni cálculo cambia de una hoja a otra.
+
+Los filtros globales están en dos filas para que no se vea saturado: arriba, destacados, **Fecha
+de extracción** y **Comparar contra** (los que más se usan en la validación semanal); abajo, en
+una fila más compacta, **Mega Deals**, **Año R** y **"Cargar otro archivo"** — siguen siendo los
+mismos filtros, con el mismo alcance sobre las 5 hojas, solo con menos peso visual.
 
 1. **Fcst por Etapa y Mes** — Cerrada Ganada, Cerrada Ganada · Sin Soluciones de Vertical.
 2. **Pipe Abierto** — Pipe Abierto, Pipe Abierto por Vertical.
