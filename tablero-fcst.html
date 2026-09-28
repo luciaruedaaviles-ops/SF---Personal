@@ -87,6 +87,22 @@
   .control-group{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
   .control-label{font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap;}
 
+  .dropdown-wrap{position:relative; display:inline-block;}
+  .dropdown-wrap::after{
+    content:''; position:absolute; right:13px; top:50%; width:7px; height:7px;
+    border-right:2px solid rgba(255,255,255,0.85); border-bottom:2px solid rgba(255,255,255,0.85);
+    transform:translateY(-65%) rotate(45deg); pointer-events:none;
+  }
+  .dropdown-wrap select{
+    font-family:'IBM Plex Mono'; font-size:12.5px; font-weight:700; color:#FFFFFF;
+    border:1.5px solid transparent; border-radius:8px; padding:9px 34px 9px 14px;
+    cursor:pointer; min-width:150px;
+    appearance:none; -webkit-appearance:none; -moz-appearance:none;
+  }
+  .dropdown-wrap select:focus{outline:2px solid rgba(255,255,255,0.5); outline-offset:1px;}
+  .dropdown-wrap-primary select{background:var(--accent-2); box-shadow:0 1px 4px rgba(138,106,46,0.3);}
+  .dropdown-wrap-compare select{background:var(--accent); box-shadow:0 1px 4px rgba(21,51,90,0.25);}
+
   .controls-secondary{padding:8px 0 14px; gap:18px; justify-content:flex-start; border-top:1px solid var(--border); opacity:0.82;}
   .controls-secondary .control-label{font-size:9.5px;}
   .controls-secondary .seg button{padding:5px 10px; font-size:11px;}
@@ -208,11 +224,15 @@
     <div class="controls">
       <div class="control-group">
         <span class="control-label">Consultar por Fecha de Extracción (columna A)</span>
-        <div class="seg dates" id="dateTabs"></div>
+        <div class="dropdown-wrap dropdown-wrap-primary">
+          <select id="dateTabs"></select>
+        </div>
       </div>
       <div class="control-group">
         <span class="control-label">Comparar contra</span>
-        <div class="seg" id="compareTabs"></div>
+        <div class="dropdown-wrap dropdown-wrap-compare">
+          <select id="compareTabs"></select>
+        </div>
       </div>
     </div>
 
@@ -1156,11 +1176,9 @@ function renderControls(){
 
   const dateTabs = document.getElementById('dateTabs');
   dateTabs.innerHTML = STATE.dateGroups.map((g,i)=>
-    `<button data-idx="${i}" class="${i===STATE.selDateIdx?'active':''}">${g.label}</button>`
+    `<option value="${i}" ${i===STATE.selDateIdx?'selected':''}>${g.label}</option>`
   ).join('');
-  dateTabs.querySelectorAll('button').forEach(b=>{
-    b.addEventListener('click', ()=>{ STATE.selDateIdx = Number(b.dataset.idx); STATE.selCompareIdx = null; renderControls(); renderAll(); });
-  });
+  dateTabs.onchange = ()=>{ STATE.selDateIdx = Number(dateTabs.value); STATE.selCompareIdx = null; renderControls(); renderAll(); };
 
   const compareTabs = document.getElementById('compareTabs');
   const autoCompareIdx = STATE.selDateIdx + 1;
@@ -1168,11 +1186,9 @@ function renderControls(){
   compareTabs.innerHTML = STATE.dateGroups.map((g,i)=>{
     if (i === STATE.selDateIdx) return '';
     const label = g.label + (i===autoCompareIdx ? ' (anterior)' : '');
-    return `<button data-idx="${i}" class="${i===effectiveCompareIdx?'active':''}">${label}</button>`;
+    return `<option value="${i}" ${i===effectiveCompareIdx?'selected':''}>${label}</option>`;
   }).join('');
-  compareTabs.querySelectorAll('button').forEach(b=>{
-    b.addEventListener('click', ()=>{ STATE.selCompareIdx = Number(b.dataset.idx); renderControls(); renderAll(); });
-  });
+  compareTabs.onchange = ()=>{ STATE.selCompareIdx = Number(compareTabs.value); renderControls(); renderAll(); };
 
   const mdToggle = document.getElementById('mdToggle');
   mdToggle.querySelectorAll('button').forEach(b=>{

@@ -110,9 +110,11 @@ filtros globales — esos aplican a las 5 por igual. Solo es orden de navegació
 filtro ni cálculo cambia de una hoja a otra.
 
 Los filtros globales están en dos filas para que no se vea saturado: arriba, destacados, **Fecha
-de extracción** y **Comparar contra** (los que más se usan en la validación semanal); abajo, en
-una fila más compacta, **Mega Deals**, **Año R** y **"Cargar otro archivo"** — siguen siendo los
-mismos filtros, con el mismo alcance sobre las 5 hojas, solo con menos peso visual.
+de extracción** y **Comparar contra** (los que más se usan en la validación semanal), cada uno
+como una lista desplegable — así, a medida que se acumulen más semanas de extracción, la lista
+se lee de arriba hacia abajo en vez de amontonar botones en una fila; abajo, en una fila más
+compacta, **Mega Deals**, **Año R** y **"Cargar otro archivo"** — siguen siendo los mismos
+filtros, con el mismo alcance sobre las 5 hojas, solo con menos peso visual.
 
 1. **Fcst por Etapa y Mes** — Cerrada Ganada, Cerrada Ganada · Sin Soluciones de Vertical.
 2. **Pipe Abierto** — Pipe Abierto, Pipe Abierto por Vertical.
