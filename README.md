@@ -195,7 +195,8 @@ Al pie de esa tabla hay un **Resumen** en texto con lo más relevante de cada ca
   (ignora corrimientos de fecha dentro del mismo año); debajo lista, una por una, las que se
   movieron a un **año posterior** (Tema y Precio total convertido de cada una).
 - **Etapa**: solo cuenta las oportunidades que pasaron a **Cerrada Perdida** en este periodo, con
-  su monto total.
+  su monto total; debajo lista el **top 3 por monto** de esas oportunidades (Tema y Precio total
+  convertido de cada una).
 - **Estatus**: cuántas oportunidades cambiaron de Estatus y cuál fue el movimiento más frecuente.
 
 ### Estructura

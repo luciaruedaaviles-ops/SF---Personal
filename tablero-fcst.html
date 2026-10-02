@@ -1121,6 +1121,10 @@ function renderCambiosResumen(changes){
 
   const nuevasPerdidas = changes.filter(c=>c.chg.etapa && c.chg.etapa.to === 'Cerrada Perdida');
   const nuevasPerdidasTotal = sum(nuevasPerdidas, r=>r.precioTotal);
+  const nuevasPerdidasTop = [...nuevasPerdidas].sort((a,b)=>b.precioTotal-a.precioTotal).slice(0,3);
+  const nuevasPerdidasTopHtml = nuevasPerdidasTop.length
+    ? ` Top ${nuevasPerdidasTop.length} por monto:<ul class="cambios-resumen-sublist">${nuevasPerdidasTop.map(c=>`<li>${c.tema||'—'} — ${fmtMoney(c.precioTotal)}</li>`).join('')}</ul>`
+    : '';
 
   const estatusChanges = changes.filter(c=>c.chg.estatus);
   const transMap = new Map();
@@ -1143,7 +1147,7 @@ function renderCambiosResumen(changes){
     : `<b>Fecha Real de Cierre:</b> ninguna oportunidad cambió de año en su Fecha Real de Cierre.`);
 
   items.push(nuevasPerdidas.length
-    ? `<b>Etapa:</b> ${nuevasPerdidas.length} oportunidades pasaron a Cerrada Perdida en este periodo, por ${fmtMoney(nuevasPerdidasTotal)}.`
+    ? `<b>Etapa:</b> ${nuevasPerdidas.length} oportunidades pasaron a Cerrada Perdida en este periodo, por ${fmtMoney(nuevasPerdidasTotal)}.` + nuevasPerdidasTopHtml
     : `<b>Etapa:</b> ninguna oportunidad pasó a Cerrada Perdida en este periodo.`);
 
   items.push(estatusChanges.length
