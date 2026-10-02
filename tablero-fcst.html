@@ -260,11 +260,21 @@
         <div class="section-head">
           <div>
             <div class="section-eyebrow">Réplica · Tablas 1-5 de la hoja "TD"</div>
-            <h2 class="section-title">Forecast por Etapa y Mes</h2>
+            <h2 class="section-title">Cerrada Ganada por Etapa y Mes</h2>
           </div>
           <div class="section-note">Filas = Estatus · Columnas = Mes R (Fecha Real de Cierre) · Valor = Suma de Precio total (convertido). El filtro Con/Sin Mega Deals de arriba aplica a las 2 tarjetas. Solo se muestran los meses con al menos una línea (igual que la tabla dinámica).</div>
         </div>
         <div class="panel-grid" id="panelsEtapaMes"></div>
+      </div>
+
+      <div class="section" id="secFcst">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title">Fcst</h2>
+          </div>
+          <div class="section-note">Fcst = Cerrada Ganada + Comprometida (Pipe Abierto), por Mes R (Fecha Real de Cierre). El filtro Con/Sin Mega Deals de arriba aplica a las 2 tarjetas.</div>
+        </div>
+        <div class="panel-grid" id="panelsFcst"></div>
       </div>
     </div>
 
@@ -398,7 +408,7 @@ const STATE = {
   dateGroups: [],   // [{key, label, date, rows}] ordenado desc
   years: [],
   selDateIdx: 0,
-  selHoja: 1,   // 1=Fcst por Etapa y Mes, 2=Pipe Abierto, 3=Cerrada Perdida, 4=Creación de Oportunidades, 5=Mega Deals
+  selHoja: 1,   // 1=Cerrada Ganada por Etapa y Mes, 2=Pipe Abierto, 3=Cerrada Perdida, 4=Creación de Oportunidades, 5=Mega Deals
   selCompareIdx: null,   // null = corte inmediato anterior (automático); si no, índice explícito en dateGroups
   selYear: null,
   megaDealMode: 'con',   // 'con' | 'sin' — filtro global Con/Sin Mega Deals
@@ -686,7 +696,7 @@ function renderAll(){
   const md = STATE.megaDealMode === 'sin' ? 'FALSO' : null;
   const mdLabel = STATE.megaDealMode === 'sin' ? 'No' : 'Todas';
 
-  /* ---- Sección 1: Forecast por Etapa y Mes ---- */
+  /* ---- Sección 1: Cerrada Ganada por Etapa y Mes ---- */
   function buildEtapaMesPanel(def){
     const scoped = filterRows(rows, def.filters);
     const pivot = buildPivot(scoped, {
@@ -713,6 +723,45 @@ function renderAll(){
     }
   ];
   document.getElementById('panelsEtapaMes').innerHTML = etapaMesDefs.map(buildEtapaMesPanel).join('');
+
+  function buildFcstPanel(def){
+    const ganadaRows = filterRows(rows, def.ganadaFilters);
+    const compRows = filterRows(rows, def.openFilters).filter(r=>r.estatus==='Comprometida');
+    const combined = [
+      ...ganadaRows.map(r=>({...r, fcstRow:'Cerrada Ganada'})),
+      ...compRows.map(r=>({...r, fcstRow:'Comprometida (Pipe Abierto)'}))
+    ];
+    const pivot = buildPivot(combined, {
+      rowOrder: ['Cerrada Ganada','Comprometida (Pipe Abierto)'],
+      getRowKey: r=>r.fcstRow,
+      getColKey: r=>r.mesR,
+      colSort: (a,b)=>a-b,
+      valueFn: r=>r.precioTotal
+    });
+    const fcstFilterFn = rws=>{
+      const g = filterRows(rws, def.ganadaFilters);
+      const c = filterRows(rws, def.openFilters).filter(r=>r.estatus==='Comprometida');
+      return [...g, ...c];
+    };
+    const delta = renderDeltaBadge(pivot.grand, prevGroup, fcstFilterFn, r=>r.precioTotal);
+    return panelHtml(def.title, def.desc, renderMesPivotTable(pivot), delta);
+  }
+
+  const fcstDefs = [
+    {
+      title: 'Fcst',
+      ganadaFilters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año},
+      openFilters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año},
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Cerrada Ganada + Comprometida (Pipe Abierto) · Año R=${año}`
+    },
+    {
+      title: 'Fcst · Sin Soluciones de Vertical',
+      ganadaFilters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año, deliveryVerticalSet: DO_LINEAS},
+      openFilters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año, deliveryVerticalSet: DO_LINEAS},
+      desc: `Igual que arriba + Delivery Vertical = excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities)`
+    }
+  ];
+  document.getElementById('panelsFcst').innerHTML = fcstDefs.map(buildFcstPanel).join('');
 
   document.getElementById('panelPipeAbierto').innerHTML = buildEtapaMesPanel({
     title: 'Pipe Abierto',
@@ -1173,7 +1222,7 @@ function renderCambiosResumen(changes){
 /* ============================================================
    CONTROLES
 ============================================================ */
-const HOJAS = ['Fcst por Etapa y Mes','Pipe Abierto','Cerrada Perdida','Creación de Oportunidades','Mega Deals'];
+const HOJAS = ['Cerrada Ganada por Etapa y Mes','Pipe Abierto','Cerrada Perdida','Creación de Oportunidades','Mega Deals'];
 function applyHojaVisibility(){
   document.querySelectorAll('.hoja').forEach(el=>{
     el.hidden = Number(el.dataset.hoja) !== STATE.selHoja;

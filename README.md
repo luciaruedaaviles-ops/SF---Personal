@@ -116,7 +116,9 @@ se lee de arriba hacia abajo en vez de amontonar botones en una fila; abajo, en 
 compacta, **Mega Deals**, **Año R** y **"Cargar otro archivo"** — siguen siendo los mismos
 filtros, con el mismo alcance sobre las 5 hojas, solo con menos peso visual.
 
-1. **Fcst por Etapa y Mes** — Cerrada Ganada, Cerrada Ganada · Sin Soluciones de Vertical.
+1. **Cerrada Ganada por Etapa y Mes** — Cerrada Ganada, Cerrada Ganada · Sin Soluciones de
+   Vertical, y debajo **Fcst** (Cerrada Ganada + Comprometida de Pipe Abierto), con su propia
+   tarjeta Todas / Sin Soluciones de Vertical.
 2. **Pipe Abierto** — Pipe Abierto, Pipe Abierto por Vertical (la segunda tarjeta, Sin Soluciones de
    Vertical, desglosa por Delivery Vertical/Línea de Servicios en vez de Vertical).
 3. **Cerrada Perdida** — Cerrada Perdida, Cerrada Perdida — Detalle por oportunidad, Motivo y
@@ -160,6 +162,8 @@ dinámica de origen). En resumen:
 |---|---|---|---|
 | Cerrada Ganada | Estatus | Mes R | Tipo Estándar/Fast Track · Mega Deal = selector Con/Sin · Etapa = Cerrada Ganada |
 | Cerrada Ganada · Sin Soluciones de Vertical | Estatus | Mes R | Igual + Delivery Vertical excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities) |
+| Fcst | Cerrada Ganada · Comprometida (Pipe Abierto) | Mes R | Suma Cerrada Ganada (todos los Estatus) + Pipe Abierto con Estatus=Comprometida, por mes — mismos filtros Tipo/Mega Deal/Año R que las tarjetas de arriba |
+| Fcst · Sin Soluciones de Vertical | Cerrada Ganada · Comprometida (Pipe Abierto) | Mes R | Igual que Fcst + Delivery Vertical excluye líneas de Soluciones de Vertical en ambos componentes |
 | Cerrada Perdida | Estatus | Mes R | Mega Deal = selector Con/Sin · Etapa = Cerrada Perdida |
 | Cerrada Perdida — Detalle por oportunidad | — (lista por oportunidad, ID/Cuenta/Tema/Razón Perdida/Fecha Real de Cierre/Precio total) | — | Mismo filtro que "Cerrada Perdida" + Mes R = selector propio (Todos/Ene.../Dic, solo meses con datos); Precio total sumado por ID Oportunidad (una oportunidad puede tener varias líneas de producto), ordenado de mayor a menor |
 | Motivo de Pérdida (col. AC) | Barra 100% apilada + leyenda, por Vertical (selector propio) | — | Mismo filtro que "Cerrada Perdida — Detalle" (Tipo, Mega Deal, Año R, Mes R) + Vertical = selector propio; % y Suma de Precio total (convertido) por motivo, con conteo de oportunidades. Colores fijos por motivo (nunca cambian con el filtro) |
