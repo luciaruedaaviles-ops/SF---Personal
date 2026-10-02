@@ -282,9 +282,9 @@
       <div class="section" id="sec2">
         <div class="section-head">
           <div>
-            <h2 class="section-title">Pipe Abierto por Delivery Vertical/Línea de Servicios</h2>
+            <h2 class="section-title">Pipe Abierto por Vertical</h2>
           </div>
-          <div class="section-note">Filas = Delivery Vertical/Línea de Servicios · Columnas = Mes R · Mega Deals según el filtro de arriba. A la izquierda, todas las Delivery Vertical/Línea de Servicios; a la derecha, excluye las líneas de Soluciones de Vertical.</div>
+          <div class="section-note">Columnas = Mes R · Mega Deals según el filtro de arriba. A la izquierda, filas = Vertical (todas las líneas); a la derecha, filas = Delivery Vertical/Línea de Servicios, excluye las líneas de Soluciones de Vertical.</div>
         </div>
         <div class="control-group" style="margin-bottom:14px;">
           <span class="control-label">Estatus</span>
@@ -803,26 +803,36 @@ function renderAll(){
   const estatusVert = STATE.selEstatusVert;
   const vertPanelDefs = [
     {
-      title: `Pipe Abierto por Delivery Vertical/Línea de Servicios · Estatus=${estatusVert} · Año R=${año}`,
+      title: `Pipe Abierto por Vertical · Estatus=${estatusVert} · Año R=${año}`,
       filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año},
-      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Pipe Abierto · Estatus=${estatusVert} · Delivery Vertical=Todas · Año R=${año}`
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Pipe Abierto · Estatus=${estatusVert} · Delivery Vertical=Todas · Año R=${año}`,
+      byDeliveryVertical: false
     },
     {
       title: `Pipe Abierto por Delivery Vertical/Línea de Servicios · Sin Soluciones de Vertical · Estatus=${estatusVert} · Año R=${año}`,
       filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año, deliveryVerticalSet: DO_LINEAS},
-      desc: `Igual que arriba + Delivery Vertical = excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities)`
+      desc: `Igual que arriba + Delivery Vertical = excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities)`,
+      byDeliveryVertical: true
     }
   ];
   document.getElementById('panelVertical').innerHTML = vertPanelDefs.map(def=>{
     const vertScopedBase = filterRows(rows, def.filters);
     const vertScoped = estatusVert==='Todas' ? vertScopedBase : vertScopedBase.filter(r=>r.estatus===estatusVert);
-    const vertPivot = buildPivot(vertScoped, {
-      rowOrder: [...new Set(vertScoped.map(r=>r.deliveryVertical).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),
-      getRowKey: r=>r.deliveryVertical || null,
-      getColKey: r=>r.mesR,
-      colSort: (a,b)=>a-b,
-      valueFn: r=>r.precioTotal
-    });
+    const vertPivot = def.byDeliveryVertical
+      ? buildPivot(vertScoped, {
+          rowOrder: [...new Set(vertScoped.map(r=>r.deliveryVertical).filter(Boolean))].sort((a,b)=>a.localeCompare(b)),
+          getRowKey: r=>r.deliveryVertical || null,
+          getColKey: r=>r.mesR,
+          colSort: (a,b)=>a-b,
+          valueFn: r=>r.precioTotal
+        })
+      : buildPivot(vertScoped, {
+          rowOrder: VERTICAL_ORDER,
+          getRowKey: r=> VERTICAL_ORDER.includes(r.vertical) ? r.vertical : null,
+          getColKey: r=>r.mesR,
+          colSort: (a,b)=>a-b,
+          valueFn: r=>r.precioTotal
+        });
     vertPivot.rowOrder = vertPivot.rowOrder.filter(rk => vertPivot.rowTotals[rk] > 0);
     const vertDeltaFilterFn = rws=>{
       const base = filterRows(rws, def.filters);
