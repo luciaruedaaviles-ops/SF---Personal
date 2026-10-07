@@ -118,7 +118,9 @@ filtros, con el mismo alcance sobre las 5 hojas, solo con menos peso visual.
 
 1. **Cerrada Ganada por Etapa y Mes** — Cerrada Ganada, Cerrada Ganada · Sin Soluciones de
    Vertical, y debajo **Fcst** (Cerrada Ganada + Comprometida de Pipe Abierto), con su propia
-   tarjeta Todas / Sin Soluciones de Vertical.
+   tarjeta Todas / Sin Soluciones de Vertical. Tiene su propio filtro **Trimestre (Mes R)**
+   (Todos/Q1/Q2/Q3/Q4) que acota las columnas de mes de las 4 tarjetas de esta hoja a los meses
+   de ese trimestre (Q1=Ene-Mar, Q2=Abr-Jun, Q3=Jul-Sep, Q4=Oct-Dic) — no afecta ninguna otra hoja.
 2. **Pipe Abierto** — Pipe Abierto, Pipe Abierto por Vertical (la segunda tarjeta, Sin Soluciones de
    Vertical, desglosa por Delivery Vertical/Línea de Servicios en vez de Vertical).
 3. **Cerrada Perdida** — Cerrada Perdida, Cerrada Perdida — Detalle por oportunidad, Motivo y

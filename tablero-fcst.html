@@ -264,6 +264,10 @@
           </div>
           <div class="section-note">Filas = Estatus · Columnas = Mes R (Fecha Real de Cierre) · Valor = Suma de Precio total (convertido). El filtro Con/Sin Mega Deals de arriba aplica a las 2 tarjetas. Solo se muestran los meses con al menos una línea (igual que la tabla dinámica).</div>
         </div>
+        <div class="control-group" style="margin-bottom:14px;">
+          <span class="control-label">Trimestre (Mes R)</span>
+          <div class="seg" id="trimestreTabs"></div>
+        </div>
         <div class="panel-grid" id="panelsEtapaMes"></div>
       </div>
 
@@ -272,7 +276,7 @@
           <div>
             <h2 class="section-title">Fcst</h2>
           </div>
-          <div class="section-note">Fcst = Cerrada Ganada + Comprometida (Pipe Abierto), por Mes R (Fecha Real de Cierre). El filtro Con/Sin Mega Deals de arriba aplica a las 2 tarjetas.</div>
+          <div class="section-note">Fcst = Cerrada Ganada + Comprometida (Pipe Abierto), por Mes R (Fecha Real de Cierre). El filtro Con/Sin Mega Deals y Trimestre de arriba aplica a las 2 tarjetas.</div>
         </div>
         <div class="panel-grid" id="panelsFcst"></div>
       </div>
@@ -388,6 +392,7 @@
 ============================================================ */
 const ESTATUS_ORDER = ['Comprometida','Probable','Indeterminada'];
 const ETAPA_OPEN = ['Prospección','Solución','Negociación','Cierre'];
+const QUARTER_MONTHS = {Q1:[1,2,3], Q2:[4,5,6], Q3:[7,8,9], Q4:[10,11,12]};
 const TIPO_PRINCIPAL = new Set(['Oportunidad Estándar','Oportunidad Fast Track']);
 const TIPO_SECUNDARIA = new Set(['Oportunidad Estándar Secundaria','Oportunidad Fast Track Secundaria']);
 const DO_LINEAS = new Set([
@@ -415,6 +420,7 @@ const STATE = {
   selAñoC: null,   // null = usar el año de la Fecha de extracción del corte activo
   selMesC: null,   // null = usar el mes de la Fecha de extracción del corte activo
   selEstatusVert: 'Todas',   // filtro de Estatus para Pipe Abierto por Vertical
+  selQ: null,   // filtro de Trimestre (Mes R) para la hoja Cerrada Ganada por Etapa y Mes: null=Todos, 'Q1'..'Q4'
   selMesPerdida: 'Todos',   // filtro de Mes R para Cerrada Perdida — Detalle por oportunidad
   selVerticalPerdida: 'Todas',   // filtro de Vertical para Motivo/Razón de Pérdida
   snapshotDate: null,
@@ -697,8 +703,18 @@ function renderAll(){
   const mdLabel = STATE.megaDealMode === 'sin' ? 'No' : 'Todas';
 
   /* ---- Sección 1: Cerrada Ganada por Etapa y Mes ---- */
-  function buildEtapaMesPanel(def){
-    const scoped = filterRows(rows, def.filters);
+  const trimestreTabs = document.getElementById('trimestreTabs');
+  const trimestreOptions = ['Todos','Q1','Q2','Q3','Q4'];
+  trimestreTabs.innerHTML = trimestreOptions.map(q=>
+    `<button data-q="${q}" class="${(q==='Todos'?STATE.selQ==null:q===STATE.selQ)?'active':''}">${q}</button>`
+  ).join('');
+  trimestreTabs.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{ STATE.selQ = b.dataset.q === 'Todos' ? null : b.dataset.q; renderAll(); });
+  });
+  const qMonths = STATE.selQ ? QUARTER_MONTHS[STATE.selQ] : null;
+  function buildEtapaMesPanel(def, quarterMonths){
+    let scoped = filterRows(rows, def.filters);
+    if (quarterMonths) scoped = scoped.filter(r=>quarterMonths.includes(r.mesR));
     const pivot = buildPivot(scoped, {
       rowOrder: ESTATUS_ORDER,
       getRowKey: r=>r.estatus,
@@ -706,7 +722,11 @@ function renderAll(){
       colSort: (a,b)=>a-b,
       valueFn: r=>r.precioTotal
     });
-    const delta = renderDeltaBadge(pivot.grand, prevGroup, rws=>filterRows(rws, def.filters), r=>r.precioTotal);
+    const delta = renderDeltaBadge(pivot.grand, prevGroup, rws=>{
+      let f = filterRows(rws, def.filters);
+      if (quarterMonths) f = f.filter(r=>quarterMonths.includes(r.mesR));
+      return f;
+    }, r=>r.precioTotal);
     return panelHtml(def.title, def.desc, renderMesPivotTable(pivot), delta);
   }
 
@@ -714,19 +734,23 @@ function renderAll(){
     {
       title: 'Cerrada Ganada',
       filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año},
-      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Ganada · Año R=${año}`
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Etapa=Cerrada Ganada · Año R=${año}` + (STATE.selQ ? ` · Trimestre=${STATE.selQ}` : '')
     },
     {
       title: 'Cerrada Ganada · Sin Soluciones de Vertical',
       filters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año, deliveryVerticalSet: DO_LINEAS},
-      desc: `Igual que arriba + Delivery Vertical = excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities)`
+      desc: `Igual que arriba + Delivery Vertical = excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities)` + (STATE.selQ ? ` · Trimestre=${STATE.selQ}` : '')
     }
   ];
-  document.getElementById('panelsEtapaMes').innerHTML = etapaMesDefs.map(buildEtapaMesPanel).join('');
+  document.getElementById('panelsEtapaMes').innerHTML = etapaMesDefs.map(def=>buildEtapaMesPanel(def, qMonths)).join('');
 
-  function buildFcstPanel(def){
-    const ganadaRows = filterRows(rows, def.ganadaFilters);
-    const compRows = filterRows(rows, def.openFilters).filter(r=>r.estatus==='Comprometida');
+  function buildFcstPanel(def, quarterMonths){
+    let ganadaRows = filterRows(rows, def.ganadaFilters);
+    let compRows = filterRows(rows, def.openFilters).filter(r=>r.estatus==='Comprometida');
+    if (quarterMonths){
+      ganadaRows = ganadaRows.filter(r=>quarterMonths.includes(r.mesR));
+      compRows = compRows.filter(r=>quarterMonths.includes(r.mesR));
+    }
     const combined = [
       ...ganadaRows.map(r=>({...r, fcstRow:'Cerrada Ganada'})),
       ...compRows.map(r=>({...r, fcstRow:'Comprometida (Pipe Abierto)'}))
@@ -739,8 +763,12 @@ function renderAll(){
       valueFn: r=>r.precioTotal
     });
     const fcstFilterFn = rws=>{
-      const g = filterRows(rws, def.ganadaFilters);
-      const c = filterRows(rws, def.openFilters).filter(r=>r.estatus==='Comprometida');
+      let g = filterRows(rws, def.ganadaFilters);
+      let c = filterRows(rws, def.openFilters).filter(r=>r.estatus==='Comprometida');
+      if (quarterMonths){
+        g = g.filter(r=>quarterMonths.includes(r.mesR));
+        c = c.filter(r=>quarterMonths.includes(r.mesR));
+      }
       return [...g, ...c];
     };
     const delta = renderDeltaBadge(pivot.grand, prevGroup, fcstFilterFn, r=>r.precioTotal);
@@ -752,16 +780,16 @@ function renderAll(){
       title: 'Fcst',
       ganadaFilters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año},
       openFilters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año},
-      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Cerrada Ganada + Comprometida (Pipe Abierto) · Año R=${año}`
+      desc: `Tipo=Estándar/Fast Track · Mega Deal=${mdLabel} · Cerrada Ganada + Comprometida (Pipe Abierto) · Año R=${año}` + (STATE.selQ ? ` · Trimestre=${STATE.selQ}` : '')
     },
     {
       title: 'Fcst · Sin Soluciones de Vertical',
       ganadaFilters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa:'Cerrada Ganada', añoR: año, deliveryVerticalSet: DO_LINEAS},
       openFilters: {tipo: TIPO_PRINCIPAL, megaDeal:md, etapa: ETAPA_OPEN, añoR: año, deliveryVerticalSet: DO_LINEAS},
-      desc: `Igual que arriba + Delivery Vertical = excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities)`
+      desc: `Igual que arriba + Delivery Vertical = excluye líneas de Soluciones de Vertical (Banca & Seguros, SC&M, Multi Industrias, Retail & Comercio, Salud, Utilities)` + (STATE.selQ ? ` · Trimestre=${STATE.selQ}` : '')
     }
   ];
-  document.getElementById('panelsFcst').innerHTML = fcstDefs.map(buildFcstPanel).join('');
+  document.getElementById('panelsFcst').innerHTML = fcstDefs.map(def=>buildFcstPanel(def, qMonths)).join('');
 
   document.getElementById('panelPipeAbierto').innerHTML = buildEtapaMesPanel({
     title: 'Pipe Abierto',
