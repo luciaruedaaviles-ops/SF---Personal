@@ -119,6 +119,9 @@
   .stack span{display:block; height:100%;}
   .pct{font-weight:600;}
   td.late{color:var(--bad);}
+  .subbar{display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border-soft); font-size:12px; color:var(--text-dim);}
+  .subbar label{font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.4px;}
+  .subbar select{font:inherit; font-size:13px; padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text);}
   .mm{color:var(--text-dim); font-weight:400;}
   td.cm{white-space:nowrap;}
   .subh{padding:12px 16px 8px; font-size:11px; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:.4px; border-top:1px solid var(--border-soft);}
@@ -230,6 +233,10 @@
         <h2><i class="dot" style="background:var(--nodeal)"></i>Sin deal <span class="count" id="noDealCount"></span></h2>
         <span class="sub" id="noDealSub"></span>
       </div>
+      <div class="subbar">
+        <label for="noDealMonth">Mes de creación</label>
+        <select id="noDealMonth"></select>
+      </div>
       <div class="tscroll tall"><table id="noDealTable"></table></div>
     </div>
 
@@ -246,6 +253,7 @@ const ETAPAS_CERRADAS = new Set(['Cerrada Ganada', 'Cerrada Perdida']);
 // Orden del embudo para las filas de Etapa del cuadro resumen; cualquier etapa nueva va al final.
 const ETAPA_ORDEN = ['Prospección', 'Solución', 'Negociación', 'Cierre', 'Cerrada Ganada', 'Cerrada Perdida'];
 const SIN_DEAL = 'Sin deal';
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 // Se buscan por nombre de encabezado; si Salesforce cambia el nombre, se usa la letra de columna.
 const COLS = {
@@ -264,7 +272,7 @@ const COLS = {
 };
 
 const S = {
-  opps:[], meta:{}, unit:'ALL', year:'ALL', scope:'abiertas', q:'', open:new Set(),
+  opps:[], meta:{}, unit:'ALL', year:'ALL', scope:'abiertas', q:'', noDealMonth:'ALL', open:new Set(),
   sortDeal:{key:'fecha', dir:-1}, sortNoDeal:{key:'fecha', dir:-1}
 };
 
@@ -519,9 +527,23 @@ function renderConciliacion(){
 }
 
 // Mismo universo que el cuadro resumen, separado en con deal / sin deal.
+// Sin deal: siempre solo abiertas (sin Cerrada Ganada ni Cerrada Perdida), sin importar el filtro de Etapas,
+// y con su propio filtro de mes de creación.
+const mesKey = d => d ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}` : '';
+function noDealsBase(){ return filtered().filter(o => !conDeal(o) && abierta(o)); }
 function detailLists(){
   const l = filtered();
-  return {deals: l.filter(conDeal), noDeals: l.filter(o => !conDeal(o))};
+  const noDeals = noDealsBase().filter(o => S.noDealMonth === 'ALL' || mesKey(o.fecha) === S.noDealMonth);
+  return {deals: l.filter(conDeal), noDeals};
+}
+function renderNoDealMonths(){
+  const counts = {};
+  noDealsBase().forEach(o => { const k = mesKey(o.fecha); if (k) counts[k] = (counts[k] || 0) + 1; });
+  const keys = Object.keys(counts).sort().reverse();
+  if (S.noDealMonth !== 'ALL' && !counts[S.noDealMonth]) S.noDealMonth = 'ALL';
+  const label = k => { const [y, m] = k.split('-'); return `${MESES[+m - 1]} ${y}`; };
+  document.getElementById('noDealMonth').innerHTML = `<option value="ALL">Todos los meses</option>` +
+    keys.map(k => `<option value="${k}" ${S.noDealMonth === k ? 'selected' : ''}>${label(k)} (${counts[k]})</option>`).join('');
 }
 const verticales = l => [...new Set(l.map(o => o.vertical))].sort((a, b) => a.localeCompare(b, 'es'));
 const etapasDe = l => [...new Set(l.map(o => o.etapa))].sort((x, y) => etapaRank(x) - etapaRank(y) || x.localeCompare(y, 'es'));
@@ -544,6 +566,7 @@ function render(){
   renderBanner(list);
   renderKpis(list);
   renderPivot(base);
+  renderNoDealMonths();
   const {deals, noDeals} = detailLists();
   const sumM = l => l.reduce((s, o) => s + o.monto, 0);
   const scopeTxt = S.unit === 'ALL' ? 'Todas las unidades' : S.unit;
@@ -551,7 +574,7 @@ function render(){
   document.getElementById('noDealCount').textContent = noDeals.length;
   const etTxt = S.scope === 'abiertas' ? 'solo abiertas' : 'incluye cerradas';
   document.getElementById('dealSub').textContent = `${scopeTxt} · cualquier monto · ${etTxt} · ${fmtMM(sumM(deals))}`;
-  document.getElementById('noDealSub').textContent = `${scopeTxt} · solo Monto (convertido) ≥ USD 500K · ${etTxt} · ${fmtMM(sumM(noDeals))} · "Días" = días desde la creación al corte`;
+  document.getElementById('noDealSub').textContent = `${scopeTxt} · solo Monto (convertido) ≥ USD 500K · solo abiertas · ${fmtMM(sumM(noDeals))} · "Días" = días desde la creación al corte`;
   document.getElementById('dealSummary').innerHTML = dealSummaryHTML(deals);
   detailTable('dealTable', deals, S.sortDeal, true);
   detailTable('noDealTable', noDeals, S.sortNoDeal, false);
@@ -627,7 +650,7 @@ function exportExcel(){
 /* ---------- Carga ---------- */
 function load(wb){
   const {opps, meta} = parseWorkbook(wb);
-  Object.assign(S, {opps, meta, unit:'ALL', year:'ALL', scope:'abiertas', q:'', open:new Set()});
+  Object.assign(S, {opps, meta, unit:'ALL', year:'ALL', scope:'abiertas', q:'', noDealMonth:'ALL', open:new Set()});
   document.getElementById('search').value = '';
   document.getElementById('topSub').textContent =
     `Corte: ${meta.corte ? fmtDate(meta.corte) : 'fecha no detectada'}${meta.autor ? ' · Generado por ' + meta.autor : ''}`;
@@ -664,6 +687,7 @@ dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
 dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('drag'); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
 fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); fileInput.value = ''; });
 
+document.getElementById('noDealMonth').onchange = e => { S.noDealMonth = e.target.value; render(); };
 document.getElementById('search').oninput = e => { S.q = e.target.value.trim(); render(); };
 document.getElementById('btnExport').onclick = exportExcel;
 document.getElementById('btnReload').onclick = () => fileInput.click();

@@ -101,7 +101,10 @@ tuvieron deal y cuántas no?
 - **Con deal**: todas las oportunidades con "SI" en `Se agendo Deal`, **de cualquier monto**.
   Trae un resumen por `Vertical` (col. AC) × Etapa con cantidad y monto, y el detalle (fecha de
   creación, días, ID, cuenta, tema, etapa, vertical, tipo de deal y monto).
-- **Sin deal**: solo las de **Monto (convertido) ≥ 500K**, con el mismo detalle más
+- **Sin deal**: solo las de **Monto (convertido) ≥ 500K** y **siempre solo abiertas** (nunca
+  Cerrada Ganada ni Cerrada Perdida, aunque el filtro de Etapas diga "Incluir cerradas"). Tiene su
+  propio filtro de **mes de creación** (con el número de oportunidades por mes), que también aplica
+  a la descarga. Trae el mismo detalle más
   `Fecha Real de Cierre` (col. J) junto a la fecha de creación; se marca en rojo si ya pasó y la
   oportunidad sigue abierta.
 - Las dos tablas respetan Unidad Comercial, año, Etapas y búsqueda, y son ordenables por
