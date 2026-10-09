@@ -160,6 +160,22 @@
 
     <div class="card">
       <div class="card-h">
+        <h2>Se agendó Deal · resumen por Unidad Comercial</h2>
+        <span class="sub" id="dealUnitSub"></span>
+      </div>
+      <div class="tscroll"><table id="dealUnitTable"></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <h2>Se agendó Deal · detalle</h2>
+        <span class="sub" id="dealDetailSub"></span>
+      </div>
+      <div class="tscroll tall"><table id="dealDetailTable"></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
         <h2>Detalle por fecha de creación</h2>
         <span class="sub" id="detailSub"></span>
       </div>
@@ -186,10 +202,11 @@ const COLS = {
   etapa:   {name:'Etapa',               letter:'D'},
   cuenta:  {name:'Cuenta',              letter:null},
   tema:    {name:'Tema',                letter:null},
-  owner:   {name:'Propietario',         letter:null}
+  owner:   {name:'Propietario',         letter:null},
+  deal:    {name:'Se agendo Deal',      letter:'BH'}
 };
 
-const S = { opps:[], meta:{}, year:'ALL', unit:'ALL', q:'', sortDetail:{key:'fecha', dir:-1}, sortUnit:{key:'n', dir:-1} };
+const S = { opps:[], meta:{}, year:'ALL', unit:'ALL', q:'', sortDetail:{key:'fecha', dir:-1}, sortUnit:{key:'n', dir:-1}, sortDealUnit:{key:'conDeal', dir:-1}, sortDeal:{key:'monto', dir:-1} };
 
 const fmtUSD = v => '$' + Math.round(v).toLocaleString('es-MX');
 const fmtM = v => '$' + (v/1e6).toLocaleString('es-MX', {minimumFractionDigits:1, maximumFractionDigits:1}) + 'M';
@@ -262,7 +279,8 @@ function parseWorkbook(wb){
       etapa: String(get('etapa') ?? '').trim(),
       cuenta: String(get('cuenta') ?? '').trim(),
       tema: String(get('tema') ?? '').trim(),
-      owner: String(get('owner') ?? '').trim()
+      owner: String(get('owner') ?? '').trim(),
+      deal: String(get('deal') ?? '').trim()
     });
   }
   const all = [...byId.values()];
@@ -281,6 +299,22 @@ function filtered(){
     (!q || o.id.toLowerCase().includes(q) || o.cuenta.toLowerCase().includes(q) || o.tema.toLowerCase().includes(q)));
 }
 function years(){ return [...new Set(S.opps.map(o => o.fecha && o.fecha.getUTCFullYear()).filter(Boolean))].sort(); }
+
+// "Se agendo Deal" (BH) trae "SI", "SI - Corporativo", etc. o vacío: cualquier valor que empiece con SI cuenta como deal.
+const tieneDeal = o => /^s[ií]\b/i.test(o.deal);
+function dealTipos(list){ return [...new Set(list.filter(tieneDeal).map(o => o.deal))].sort((a, b) => a.localeCompare(b, 'es')); }
+function dealUnitRows(list){
+  const m = new Map();
+  for (const o of list){
+    if (!m.has(o.unidad)) m.set(o.unidad, {unidad:o.unidad, n:0, conDeal:0, sinDeal:0, montoDeal:0, porTipo:{}});
+    const u = m.get(o.unidad);
+    u.n++;
+    if (tieneDeal(o)){ u.conDeal++; u.montoDeal += o.monto; u.porTipo[o.deal] = (u.porTipo[o.deal] || 0) + 1; }
+    else u.sinDeal++;
+  }
+  for (const u of m.values()) u.pct = u.n ? u.conDeal / u.n : 0;
+  return [...m.values()];
+}
 
 function unitRows(list){
   const m = new Map();
@@ -341,6 +375,36 @@ function render(){
       showYears.map(y => `<td class="num mono">${list.filter(o => o.fecha && o.fecha.getUTCFullYear() === y).length || '—'}</td>`).join('') +
       `<td class="num mono">${fmtUSD(total)}</td><td class="num mono">${total ? '100%' : '—'}</td></tr></tbody>`;
 
+  // Se agendó Deal: resumen por Unidad Comercial
+  const tipos = dealTipos(list);
+  const dUnits = sortBy(dealUnitRows(list), S.sortDealUnit);
+  const deals = list.filter(tieneDeal);
+  const montoDeals = deals.reduce((s, o) => s + o.monto, 0);
+  const pctTxt = (a, b) => b ? (a / b * 100).toFixed(1) + '%' : '—';
+  document.getElementById('dealUnitSub').textContent = `${deals.length} de ${list.length} con deal (columna BH)`;
+  document.getElementById('dealUnitTable').innerHTML =
+    `<thead><tr>${th('Unidad Comercial','unidad',S.sortDealUnit)}${th('Oportunidades','n',S.sortDealUnit,'num')}${th('Con deal','conDeal',S.sortDealUnit,'num')}` +
+    tipos.map(t => `<th class="num">${esc(t)}</th>`).join('') +
+    `${th('Sin deal','sinDeal',S.sortDealUnit,'num')}${th('% con deal','pct',S.sortDealUnit,'num')}${th('Monto con deal','montoDeal',S.sortDealUnit,'num')}</tr></thead><tbody>` +
+    dUnits.map(u => `<tr><td>${esc(u.unidad)}</td><td class="num mono">${u.n}</td><td class="num mono"><b>${u.conDeal}</b></td>` +
+      tipos.map(t => `<td class="num mono">${u.porTipo[t] || '—'}</td>`).join('') +
+      `<td class="num mono">${u.sinDeal}</td><td class="num mono">${pctTxt(u.conDeal, u.n)}</td><td class="num mono">${u.montoDeal ? fmtUSD(u.montoDeal) : '—'}</td></tr>`).join('') +
+    `<tr class="total"><td>Total</td><td class="num mono">${list.length}</td><td class="num mono">${deals.length}</td>` +
+      tipos.map(t => `<td class="num mono">${deals.filter(o => o.deal === t).length}</td>`).join('') +
+      `<td class="num mono">${list.length - deals.length}</td><td class="num mono">${pctTxt(deals.length, list.length)}</td><td class="num mono">${fmtUSD(montoDeals)}</td></tr></tbody>`;
+
+  // Se agendó Deal: detalle
+  const dealSorted = sortBy(deals, S.sortDeal);
+  document.getElementById('dealDetailSub').textContent = `${deals.length} oportunidades · ${fmtM(montoDeals)}`;
+  document.getElementById('dealDetailTable').innerHTML =
+    `<thead><tr>${th('Unidad Comercial','unidad',S.sortDeal)}${th('ID Oportunidad','id',S.sortDeal)}${th('Cuenta','cuenta',S.sortDeal)}${th('Tema','tema',S.sortDeal)}` +
+    `${th('Se agendó Deal','deal',S.sortDeal)}${th('Fecha de creación','fecha',S.sortDeal)}${th('Monto (convertido)','monto',S.sortDeal,'num')}</tr></thead><tbody>` +
+    (dealSorted.length ? dealSorted.map(o => `<tr><td style="white-space:nowrap">${esc(o.unidad)}</td><td class="mono">${esc(o.id)}</td>
+      <td>${esc(o.cuenta)}</td><td class="wrapcell">${esc(o.tema)}</td><td><span class="tag">${esc(o.deal)}</span></td>
+      <td class="mono" style="white-space:nowrap">${fmtDate(o.fecha)}</td><td class="num mono">${fmtUSD(o.monto)}</td></tr>`).join('')
+      : `<tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:24px">Ninguna oportunidad con deal con este filtro</td></tr>`) +
+    `</tbody>`;
+
   // Detalle
   const dSorted = sortBy(list, S.sortDetail);
   document.getElementById('detailSub').textContent = `${list.length} oportunidades`;
@@ -371,7 +435,7 @@ function wireSort(tableId, stateKey){
   document.getElementById(tableId).addEventListener('click', e => {
     const h = e.target.closest('th[data-key]'); if (!h) return;
     const st = S[stateKey];
-    if (st.key === h.dataset.key) st.dir *= -1; else { st.key = h.dataset.key; st.dir = ['n','monto','fecha'].includes(h.dataset.key) ? -1 : 1; }
+    if (st.key === h.dataset.key) st.dir *= -1; else { st.key = h.dataset.key; st.dir = ['n','monto','fecha','conDeal','sinDeal','pct','montoDeal'].includes(h.dataset.key) ? -1 : 1; }
     render();
   });
 }
@@ -381,7 +445,7 @@ function exportExcel(){
   const detalle = list.map(o => ({
     'Fecha de creación': o.fecha ? new Date(o.fecha.getUTCFullYear(), o.fecha.getUTCMonth(), o.fecha.getUTCDate()) : '',
     'ID Oportunidad': o.id, 'Unidad Comercial': o.unidad, 'Cuenta': o.cuenta, 'Tema': o.tema,
-    'Etapa': o.etapa, 'Propietario': o.owner, 'Monto (convertido)': o.monto
+    'Etapa': o.etapa, 'Propietario': o.owner, 'Se agendó Deal': o.deal, 'Monto (convertido)': o.monto
   }));
   const ys = S.year === 'ALL' ? years() : [S.year];
   const resumen = sortBy(unitRows(list), S.sortUnit).map(u => {
@@ -390,8 +454,22 @@ function exportExcel(){
     r['Monto total'] = u.monto;
     return r;
   });
+  const tipos = dealTipos(list);
+  const dealResumen = sortBy(dealUnitRows(list), S.sortDealUnit).map(u => {
+    const r = {'Unidad Comercial': u.unidad, 'Oportunidades': u.n, 'Con deal': u.conDeal};
+    tipos.forEach(t => r[t] = u.porTipo[t] || 0);
+    Object.assign(r, {'Sin deal': u.sinDeal, '% con deal': u.pct, 'Monto con deal': u.montoDeal});
+    return r;
+  });
+  const dealDetalle = sortBy(list.filter(tieneDeal), S.sortDeal).map(o => ({
+    'Unidad Comercial': o.unidad, 'ID Oportunidad': o.id, 'Cuenta': o.cuenta, 'Tema': o.tema, 'Se agendó Deal': o.deal,
+    'Fecha de creación': o.fecha ? new Date(o.fecha.getUTCFullYear(), o.fecha.getUTCMonth(), o.fecha.getUTCDate()) : '',
+    'Monto (convertido)': o.monto
+  }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), 'Por Unidad Comercial');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dealResumen), 'Deal por Unidad');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dealDetalle, {cellDates:true}), 'Deal detalle');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalle, {cellDates:true}), 'Detalle');
   const c = S.meta.corte;
   const tag = c ? c.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
@@ -437,6 +515,8 @@ document.getElementById('btnExport').onclick = exportExcel;
 document.getElementById('btnReload').onclick = () => fileInput.click();
 wireSort('detailTable', 'sortDetail');
 wireSort('unitTable', 'sortUnit');
+wireSort('dealUnitTable', 'sortDealUnit');
+wireSort('dealDetailTable', 'sortDeal');
 </script>
 </body>
 </html>

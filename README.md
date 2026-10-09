@@ -88,6 +88,11 @@ Página aparte, del mismo tipo (estática, sin servidor), que lee el mismo Excel
 - **Oportunidades por Unidad Comercial**: cuántas oportunidades ≥ 500K hay por
   `Unidad de Comercial` (col. M), desglosadas por año de `Fecha de creación` (col. L), con monto
   total y % del total.
+- **Se agendó Deal · resumen por Unidad Comercial**: de esas oportunidades, cuántas tienen deal
+  según `Se agendo Deal` (col. BH): cualquier valor que empiece con "SI" ("SI",
+  "SI - Corporativo") cuenta como deal; vacío = sin deal. Desglosa por tipo, % con deal y monto.
+- **Se agendó Deal · detalle**: las oportunidades con deal, con Unidad Comercial, cuenta, tema,
+  tipo de deal y `Monto (convertido)`.
 - **Detalle por fecha de creación**: la lista de esas oportunidades, de la más reciente a la más
   antigua (se puede reordenar por cualquier columna).
 
