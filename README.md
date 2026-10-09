@@ -86,12 +86,16 @@ Página aparte, del mismo tipo (estática, sin servidor), que lee el mismo Excel
 "Pipe con productos FCST" y responde: de las oportunidades de USD 500K o más, ¿cuántas ya
 tuvieron deal y cuántas no?
 
-- **Filtros** (una fila arriba): Unidad Comercial, año de `Fecha de creación`, Etapas (solo
-  abiertas, por omisión, o incluir cerradas) y búsqueda por ID, cuenta o tema.
+- **Filtros** (una fila arriba): Unidad Comercial, año de `Fecha de creación`, Monto (≥ 500K, por
+  omisión, o todos los montos), Etapas (solo abiertas, por omisión, o incluir cerradas) y búsqueda
+  por ID, cuenta o tema. Con "Todos los montos" + "Incluir cerradas" cuadra contra una tabla
+  dinámica de la data completa (contando IDs únicos).
 - **Banner ejecutivo y KPIs**: total ≥ 500K, con deal, sin deal (# y monto) y % con deal.
 - **Cuadro resumen**: Unidad Comercial → Etapa en filas; `SI`, `SI - Corporativo`, `Sin deal`,
   Total y % con deal en columnas, con barra de distribución y monto. Clic en una unidad abre sus
   etapas; al elegir una unidad en el filtro se abre sola.
+- **¿Cómo se llega al resumen?**: conciliación paso a paso para la unidad elegida: todas las
+  oportunidades únicas → con monto ≥ 500K → abiertas, con cuántas tienen deal en cada paso.
 - **Detalle Con deal** y **Detalle Sin deal**: fecha de creación, días desde la creación al
   corte, ID, cuenta, tema, etapa, (tipo de deal) y monto. Ordenables por cualquier columna.
 - **Descargar Excel**: hojas Resumen, Con deal y Sin deal con el filtro activo.
@@ -100,7 +104,7 @@ Reglas:
 - Valores absolutos: se cuenta **una vez cada `ID Oportunidad`** (col. B). Monto, etapa y deal se
   repiten igual en cada línea de producto, así que no se suman líneas (una tabla dinámica de
   Excel con "Cuenta de Precio total" cuenta líneas, por eso da números mayores).
-- `Monto (convertido)` (col. BF) ≥ 500,000.
+- `Monto (convertido)` (col. BF) ≥ 500,000, comparado en valor absoluto.
 - `Tipo de registro de la oportunidad` (col. Y) = `Oportunidad Estándar` u `Oportunidad Fast Track`.
 - `Se agendo Deal` (col. BH): cualquier valor que empiece con "SI" = con deal; vacío = sin deal.
 - Abiertas = `Etapa` (col. D) distinta de `Cerrada Ganada` y `Cerrada Perdida`.
