@@ -86,29 +86,32 @@ Página aparte, del mismo tipo (estática, sin servidor), que lee el mismo Excel
 "Pipe con productos FCST" y responde: de las oportunidades de USD 500K o más, ¿cuántas ya
 tuvieron deal y cuántas no?
 
-- **Filtros** (una fila arriba): Unidad Comercial, año de `Fecha de creación`, Monto (≥ 500K, por
-  omisión, o todos los montos), Etapas (solo abiertas, por omisión, o incluir cerradas) y búsqueda
-  por ID, cuenta o tema. Con "Todos los montos" + "Incluir cerradas" cuadra contra una tabla
-  dinámica de la data completa (contando IDs únicos).
+- **Filtros** (una fila arriba): Unidad Comercial, año de `Fecha de creación`, Etapas (solo
+  abiertas, por omisión, o incluir cerradas) y búsqueda por ID, cuenta o tema.
+- **Universo de todo el tablero**: oportunidades **con deal de cualquier monto** + oportunidades
+  **sin deal con Monto (convertido) ≥ 500K**. Lo usan por igual el banner, los KPIs, el cuadro
+  resumen y las tablas de detalle, así que todo cuadra entre sí.
 - **Banner ejecutivo y KPIs**: total ≥ 500K, con deal, sin deal (# y monto) y % con deal.
 - **Cuadro resumen**: Unidad Comercial → Etapa en filas; `SI`, `SI - Corporativo`, `Sin deal`,
   Total y % con deal en columnas, con barra de distribución y monto. Clic en una unidad abre sus
   etapas; al elegir una unidad en el filtro se abre sola.
 - **¿Cómo se llega al resumen?**: conciliación paso a paso para la unidad elegida: todas las
-  oportunidades únicas → con monto ≥ 500K → abiertas, con cuántas tienen deal en cada paso.
+  oportunidades únicas → universo del tablero (con deal cualquier monto + sin deal ≥ 500K) →
+  abiertas, con cuántas tienen deal en cada paso.
 - **Con deal**: todas las oportunidades con "SI" en `Se agendo Deal`, **de cualquier monto**.
   Trae un resumen por `Vertical` (col. AC) × Etapa con cantidad y monto, y el detalle (fecha de
   creación, días, ID, cuenta, tema, etapa, vertical, tipo de deal y monto).
 - **Sin deal**: solo las de **Monto (convertido) ≥ 500K**, con el mismo detalle.
-- Las dos tablas respetan Unidad Comercial, año, Etapas y búsqueda, pero no el filtro de Monto
-  (ese aplica solo al banner, los KPIs y el cuadro resumen). Son ordenables por cualquier columna.
+- Las dos tablas respetan Unidad Comercial, año, Etapas y búsqueda, y son ordenables por
+  cualquier columna.
 - **Descargar Excel**: hojas Resumen, Con deal y Sin deal con el filtro activo.
 
 Reglas:
 - Valores absolutos: se cuenta **una vez cada `ID Oportunidad`** (col. B). Monto, etapa y deal se
   repiten igual en cada línea de producto, así que no se suman líneas (una tabla dinámica de
   Excel con "Cuenta de Precio total" cuenta líneas, por eso da números mayores).
-- `Monto (convertido)` (col. BF) ≥ 500,000, comparado en valor absoluto.
+- Sin deal: `Monto (convertido)` (col. BF) ≥ 500,000, comparado en valor absoluto. Con deal:
+  cualquier monto.
 - `Tipo de registro de la oportunidad` (col. Y) = `Oportunidad Estándar` u `Oportunidad Fast Track`.
 - `Se agendo Deal` (col. BH): cualquier valor que empiece con "SI" = con deal; vacío = sin deal.
 - Abiertas = `Etapa` (col. D) distinta de `Cerrada Ganada` y `Cerrada Perdida`.

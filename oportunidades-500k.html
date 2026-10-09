@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Deals ≥ 500K</title>
+<title>Seguimiento de Deal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@500;600;700&family=Roboto:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -143,7 +143,7 @@
 
 <div class="topbar">
   <div>
-    <div class="t1">Oportunidades ≥ USD 500K · Seguimiento de Deal</div>
+    <div class="t1">Seguimiento de Deal · Pipe con productos FCST</div>
     <div class="t2" id="topSub">Pipe con productos FCST · corte semanal</div>
   </div>
   <div id="topActions" class="hidden" style="display:flex; gap:8px;">
@@ -164,7 +164,7 @@
     </div>
     <div class="drop-error hidden" id="dropError"></div>
     <div class="rules">
-      <b>Reglas:</b> se cuenta una vez cada ID Oportunidad (B), no cada línea de producto · Monto (convertido) (BF) ≥ 500,000 ·
+      <b>Reglas:</b> se cuenta una vez cada ID Oportunidad (B), no cada línea de producto · con deal: cualquier monto · sin deal: solo Monto (convertido) (BF) ≥ 500,000 ·
       Tipo de registro (Y) = Oportunidad Estándar u Oportunidad Fast Track · Se agendó Deal (BH): "SI" o "SI - Corporativo" = con deal, vacío = sin deal ·
       por omisión solo abiertas (sin Cerrada Ganada ni Cerrada Perdida).
     </div>
@@ -179,10 +179,6 @@
       <div class="fgroup">
         <label>Año de creación</label>
         <div class="seg" id="yearSeg"></div>
-      </div>
-      <div class="fgroup">
-        <label>Monto (convertido)</label>
-        <div class="seg" id="montoSeg"></div>
       </div>
       <div class="fgroup">
         <label>Etapas</label>
@@ -203,7 +199,7 @@
         <div class="legend">
           <span><i class="dot" style="background:var(--deal)"></i>SI</span>
           <span><i class="dot" style="background:var(--corp)"></i>SI - Corporativo</span>
-          <span><i class="dot" style="background:var(--nodeal)"></i>Sin deal</span>
+          <span><i class="dot" style="background:var(--nodeal)"></i>Sin deal ≥ 500K</span>
         </div>
       </div>
       <div class="tscroll"><table id="pivot"></table></div>
@@ -266,7 +262,7 @@ const COLS = {
 };
 
 const S = {
-  opps:[], meta:{}, unit:'ALL', year:'ALL', scope:'abiertas', monto:'500k', q:'', open:new Set(),
+  opps:[], meta:{}, unit:'ALL', year:'ALL', scope:'abiertas', q:'', open:new Set(),
   sortDeal:{key:'fecha', dir:-1}, sortNoDeal:{key:'fecha', dir:-1}
 };
 
@@ -372,10 +368,11 @@ function contextList(){
     (S.year === 'ALL' || (o.fecha && o.fecha.getUTCFullYear() === S.year)) &&
     (!q || o.id.toLowerCase().includes(q) || o.cuenta.toLowerCase().includes(q) || o.tema.toLowerCase().includes(q)));
 }
+// Universo de todo el tablero: con deal de cualquier monto + sin deal solo con Monto (convertido) ≥ 500K.
+const enUniverso = o => conDeal(o) || pasaMonto(o);
 function baseList(){
-  return contextList().filter(o => (S.monto === 'todos' || pasaMonto(o)) && (S.scope === 'todas' || abierta(o)));
+  return contextList().filter(o => enUniverso(o) && (S.scope === 'todas' || abierta(o)));
 }
-const montoTxt = () => S.monto === 'todos' ? '' : '≥ USD 500K ';
 const filtered = () => baseList().filter(o => S.unit === 'ALL' || o.unidad === S.unit);
 const conDeal = o => o.deal !== SIN_DEAL;
 function dealTipos(list){
@@ -404,13 +401,13 @@ function stackHTML(a, tipos, label){
 function renderBanner(list){
   const a = agg(list, []);
   const sinN = a.n - a.deal, sinM = a.monto - a.montoDeal;
-  const scope = (S.scope === 'abiertas' ? 'abiertas ' : '') + montoTxt();
+  const scope = S.scope === 'abiertas' ? 'abiertas ' : '';
   const where = S.unit === 'ALL' ? '' : ` en <b>${esc(S.unit)}</b>`;
   const when = S.year === 'ALL' ? '' : ` creadas en ${S.year}`;
   if (!a.n){ document.getElementById('banner').innerHTML = `No hay oportunidades ${scope}${where}${when} con este filtro.`; return; }
   let txt = `De <b>${fmtN(a.n)} oportunidades ${scope.trim()}</b>${where}${when} (${fmtUSD(a.monto)}), ` +
-    `<b>${fmtN(a.deal)} (${fmtPct(a.deal, a.n)}) ya tienen deal</b> por ${fmtUSD(a.montoDeal)} y ` +
-    `<b>${fmtN(sinN)} siguen sin deal</b> por ${fmtUSD(sinM)}.`;
+    `<b>${fmtN(a.deal)} (${fmtPct(a.deal, a.n)}) ya tienen deal</b> por ${fmtUSD(a.montoDeal)} (cualquier monto) y ` +
+    `<b>${fmtN(sinN)} de USD 500K o más siguen sin deal</b> por ${fmtUSD(sinM)}.`;
   if (S.unit === 'ALL'){
     const byU = unidades().map(u => ({u, a:agg(list.filter(o => o.unidad === u), [])})).filter(x => x.a.n);
     const top = byU.slice().sort((x, y) => (y.a.monto - y.a.montoDeal) - (x.a.monto - x.a.montoDeal))[0];
@@ -423,9 +420,9 @@ function renderKpis(list){
   const a = agg(list, []);
   const sinN = a.n - a.deal;
   document.getElementById('kpis').innerHTML = `
-    <div class="kpi"><div class="l">Oportunidades ${S.monto === 'todos' ? '' : '≥ 500K'}</div><div class="v">${fmtN(a.n)}</div><div class="s">${fmtUSD(a.monto)}</div></div>
-    <div class="kpi"><div class="l"><i class="dot" style="background:var(--deal)"></i>Con deal</div><div class="v">${fmtN(a.deal)}</div><div class="s">${fmtUSD(a.montoDeal)}</div></div>
-    <div class="kpi"><div class="l"><i class="dot" style="background:var(--nodeal)"></i>Sin deal</div><div class="v">${fmtN(sinN)}</div><div class="s">${fmtUSD(a.monto - a.montoDeal)}</div></div>
+    <div class="kpi"><div class="l">Oportunidades</div><div class="v">${fmtN(a.n)}</div><div class="s">${fmtUSD(a.monto)}</div></div>
+    <div class="kpi"><div class="l"><i class="dot" style="background:var(--deal)"></i>Con deal · cualquier monto</div><div class="v">${fmtN(a.deal)}</div><div class="s">${fmtUSD(a.montoDeal)}</div></div>
+    <div class="kpi"><div class="l"><i class="dot" style="background:var(--nodeal)"></i>Sin deal · ≥ 500K</div><div class="v">${fmtN(sinN)}</div><div class="s">${fmtUSD(a.monto - a.montoDeal)}</div></div>
     <div class="kpi"><div class="l">% con deal</div><div class="v">${fmtPct(a.deal, a.n)}</div>
       <div class="s">${fmtPct(a.montoDeal, a.monto)} del monto</div>
       <div class="meter">${a.n ? `<span style="flex:${a.deal} 1 0;background:var(--deal)"></span><span style="flex:${sinN} 1 0;background:var(--nodeal)"></span>` : ''}</div></div>`;
@@ -455,7 +452,7 @@ function renderPivot(base){
   const lt = base.filter(o => units.includes(o.unidad));
   const at = agg(lt, tipos);
   document.getElementById('pivot').innerHTML =
-    `<thead><tr><th>Unidad Comercial / Etapa</th>${cols.map(t => `<th class="num">${esc(t)}</th>`).join('')}` +
+    `<thead><tr><th>Unidad Comercial / Etapa</th>${cols.map(t => `<th class="num">${esc(t === SIN_DEAL ? 'Sin deal ≥ 500K' : t)}</th>`).join('')}` +
     `<th class="num">Total</th><th class="num">% con deal</th><th>Distribución</th></tr></thead>` +
     `<tbody>${body || `<tr><td colspan="${cols.length + 4}" class="muted" style="text-align:center;padding:24px">Sin oportunidades con este filtro</td></tr>`}` +
     (lt.length ? `<tr class="total"><td>Total general</td>${cells(at)}<td>${stackHTML(at, tipos, 'Total')}</td></tr>` : '') +
@@ -501,12 +498,10 @@ function renderConciliacion(){
   const ctx = contextList().filter(o => S.unit === 'ALL' || o.unidad === S.unit);
   const pasos = [
     ['Todas las oportunidades únicas (Oportunidad Estándar / Fast Track), cualquier monto y etapa', ctx],
-    ['… con Monto (convertido) ≥ USD 500K', ctx.filter(pasaMonto)],
-    ['… y además abiertas (sin Cerrada Ganada ni Cerrada Perdida)', ctx.filter(o => pasaMonto(o) && abierta(o))]
+    ['… con deal de cualquier monto + sin deal solo con Monto (convertido) ≥ USD 500K', ctx.filter(enUniverso)],
+    ['… y además abiertas (sin Cerrada Ganada ni Cerrada Perdida)', ctx.filter(o => enUniverso(o) && abierta(o))]
   ];
-  const actual = S.monto === '500k' ? (S.scope === 'abiertas' ? 2 : 1) : (S.scope === 'abiertas' ? -1 : 0);
-  if (actual < 0) pasos.push(['… abiertas, cualquier monto (vista actual)', ctx.filter(abierta)]);
-  const sel = actual < 0 ? 3 : actual;
+  const sel = S.scope === 'abiertas' ? 2 : 1;
   const where = S.unit === 'ALL' ? 'Todas las unidades' : S.unit;
   document.getElementById('concSub').textContent = `${where}${S.year === 'ALL' ? '' : ' · creadas en ' + S.year} · cada fila cuenta IDs únicos`;
   document.getElementById('conc').innerHTML =
@@ -517,11 +512,10 @@ function renderConciliacion(){
     `</tbody>`;
 }
 
-// Con deal: cualquier monto (todas las que dicen SI). Sin deal: solo Monto (convertido) ≥ 500K.
-// Ambas respetan Unidad Comercial, año, búsqueda y Etapas; no dependen del filtro de Monto.
+// Mismo universo que el cuadro resumen, separado en con deal / sin deal.
 function detailLists(){
-  const l = contextList().filter(o => (S.unit === 'ALL' || o.unidad === S.unit) && (S.scope === 'todas' || abierta(o)));
-  return {deals: l.filter(conDeal), noDeals: l.filter(o => !conDeal(o) && pasaMonto(o))};
+  const l = filtered();
+  return {deals: l.filter(conDeal), noDeals: l.filter(o => !conDeal(o))};
 }
 const verticales = l => [...new Set(l.map(o => o.vertical))].sort((a, b) => a.localeCompare(b, 'es'));
 const etapasDe = l => [...new Set(l.map(o => o.etapa))].sort((x, y) => etapaRank(x) - etapaRank(y) || x.localeCompare(y, 'es'));
@@ -539,7 +533,7 @@ function dealSummaryHTML(deals){
 function render(){
   const base = baseList();
   renderConciliacion();
-  document.getElementById('pivotTitle').textContent = `Cuadro resumen · # oportunidades / monto en millones de USD · ${(S.scope === 'abiertas' ? 'abiertas ' : '') + montoTxt()}`.trim().replace(/ ·$/, '');
+  document.getElementById('pivotTitle').textContent = `Cuadro resumen · # oportunidades / monto en millones de USD${S.scope === 'abiertas' ? ' · abiertas' : ''}`;
   const list = filtered();
   renderBanner(list);
   renderKpis(list);
@@ -565,7 +559,6 @@ function seg(id, items, current, onPick){
 function renderFilters(){
   seg('unitSeg', [['ALL', 'Todas'], ...unidades().map(u => [u, u])], S.unit, v => { S.unit = v; renderFilters(); render(); });
   seg('yearSeg', [['ALL', 'Todos'], ...years().map(y => [y, y])], S.year, v => { S.year = v === 'ALL' ? 'ALL' : Number(v); renderFilters(); render(); });
-  seg('montoSeg', [['500k', '≥ 500K'], ['todos', 'Todos los montos']], S.monto, v => { S.monto = v; renderFilters(); render(); });
   seg('scopeSeg', [['abiertas', 'Solo abiertas'], ['todas', 'Incluir cerradas']], S.scope, v => { S.scope = v; renderFilters(); render(); });
 }
 
@@ -621,13 +614,13 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(det(deals, S.sortDeal), {cellDates:true}), 'Con deal');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(det(noDeals, S.sortNoDeal), {cellDates:true}), 'Sin deal ≥ 500K');
   const tag = (S.meta.corte || new Date()).toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `Deals_${S.monto === 'todos' ? 'todos' : '500K'}_${tag}${S.unit === 'ALL' ? '' : '_' + S.unit.replace(/[^\w]+/g, '_')}.xlsx`);
+  XLSX.writeFile(wb, `Deals_${tag}${S.unit === 'ALL' ? '' : '_' + S.unit.replace(/[^\w]+/g, '_')}.xlsx`);
 }
 
 /* ---------- Carga ---------- */
 function load(wb){
   const {opps, meta} = parseWorkbook(wb);
-  Object.assign(S, {opps, meta, unit:'ALL', year:'ALL', scope:'abiertas', monto:'500k', q:'', open:new Set()});
+  Object.assign(S, {opps, meta, unit:'ALL', year:'ALL', scope:'abiertas', q:'', open:new Set()});
   document.getElementById('search').value = '';
   document.getElementById('topSub').textContent =
     `Corte: ${meta.corte ? fmtDate(meta.corte) : 'fecha no detectada'}${meta.autor ? ' · Generado por ' + meta.autor : ''}`;
