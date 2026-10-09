@@ -103,7 +103,9 @@ tuvieron deal y cuántas no?
   Cerrada Ganada, Cerrada Perdida y **Pipe** (Prospección + Solución + Negociación, y cualquier
   otra etapa abierta como Cierre). El detalle (fecha de creación, días, ID, cuenta, tema, etapa,
   vertical, tipo de deal y monto) sí respeta el filtro de Etapas.
-- **Sin deal**: solo las de **Monto (convertido) ≥ 500K** y **siempre solo abiertas** (nunca
+- **Sin deal**: solo las de **Monto (convertido) ≥ 500K**. Trae el mismo resumen por `Vertical` que
+  Con deal (Cerrada Ganada / Cerrada Perdida / Pipe / Total, todas las etapas); el detalle es
+  **siempre solo abiertas** (nunca
   Cerrada Ganada ni Cerrada Perdida, aunque el filtro de Etapas diga "Incluir cerradas"). Tiene su
   propios filtros de **año** y **mes de creación** (con el número de oportunidades en cada opción),
   independientes del año de arriba; también aplican a la descarga. Trae el mismo detalle más
