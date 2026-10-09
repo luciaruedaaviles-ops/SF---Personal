@@ -80,32 +80,29 @@ Un único archivo HTML (`index.html`) con CSS y JS inline. Librerías externas c
 [SheetJS](https://sheetjs.com/) (lectura de Excel) y [Chart.js](https://www.chartjs.org/)
 (gráficos). Sin dependencias de build ni Node — es una página estática.
 
-## Reporte: Oportunidades ≥ USD 500K (`oportunidades-500k.html`)
+## Reporte: Oportunidades ≥ USD 500K · Seguimiento de Deal (`oportunidades-500k.html`)
 
 Página aparte, del mismo tipo (estática, sin servidor), que lee el mismo Excel semanal de
-"Pipe con productos FCST" y muestra:
+"Pipe con productos FCST" y responde: de las oportunidades de USD 500K o más, ¿cuántas ya
+tuvieron deal y cuántas no?
 
-- **Oportunidades por Unidad Comercial**: cuántas oportunidades ≥ 500K hay por
-  `Unidad de Comercial` (col. M), desglosadas por año de `Fecha de creación` (col. L), con monto
-  total y % del total.
-- **Se agendó Deal · resumen por Unidad Comercial**: de esas oportunidades, cuántas tienen deal
-  según `Se agendo Deal` (col. BH): cualquier valor que empiece con "SI" ("SI",
-  "SI - Corporativo") cuenta como deal; vacío = sin deal. Desglosa por tipo, % con deal y monto.
-- **Se agendó Deal · detalle**: las oportunidades con deal, con Unidad Comercial, cuenta, tema,
-  tipo de deal y `Monto (convertido)`.
-- **Detalle por fecha de creación**: la lista de esas oportunidades, de la más reciente a la más
-  antigua (se puede reordenar por cualquier columna).
+- **Filtros** (una fila arriba): Unidad Comercial, año de `Fecha de creación`, Etapas (solo
+  abiertas, por omisión, o incluir cerradas) y búsqueda por ID, cuenta o tema.
+- **Banner ejecutivo y KPIs**: total ≥ 500K, con deal, sin deal (# y monto) y % con deal.
+- **Cuadro resumen**: Unidad Comercial → Etapa en filas; `SI`, `SI - Corporativo`, `Sin deal`,
+  Total y % con deal en columnas, con barra de distribución y monto. Clic en una unidad abre sus
+  etapas; al elegir una unidad en el filtro se abre sola.
+- **Detalle Con deal** y **Detalle Sin deal**: fecha de creación, días desde la creación al
+  corte, ID, cuenta, tema, etapa, (tipo de deal) y monto. Ordenables por cualquier columna.
+- **Descargar Excel**: hojas Resumen, Con deal y Sin deal con el filtro activo.
 
 Reglas:
-- Una sola fila por `ID Oportunidad` (col. B). `Monto (convertido)` (col. BF) se repite igual
-  en cada línea de producto de la oportunidad, así que se toma una vez y no se suma.
-- Se quedan solo las oportunidades con `Monto (convertido)` ≥ 500,000.
-- Solo `Tipo de registro de la oportunidad` (col. Y) = `Oportunidad Estándar` u
-  `Oportunidad Fast Track` (mismo filtro que el tablero principal; quedan fuera las variantes
-  "Secundaria").
-- Solo oportunidades **abiertas**: se excluyen las de `Etapa` (col. D) `Cerrada Ganada` y
-  `Cerrada Perdida`.
-- Filtros: año de creación, Unidad Comercial y búsqueda por ID, cuenta o tema. "Descargar Excel"
-  exporta las dos tablas con el filtro activo.
-- Las columnas se ubican por el nombre del encabezado; si el nombre cambia, se usa la letra
-  (B, D, L, M, BF, Y). Al pie del reporte se muestran las columnas que se leyeron.
+- Valores absolutos: se cuenta **una vez cada `ID Oportunidad`** (col. B). Monto, etapa y deal se
+  repiten igual en cada línea de producto, así que no se suman líneas (una tabla dinámica de
+  Excel con "Cuenta de Precio total" cuenta líneas, por eso da números mayores).
+- `Monto (convertido)` (col. BF) ≥ 500,000.
+- `Tipo de registro de la oportunidad` (col. Y) = `Oportunidad Estándar` u `Oportunidad Fast Track`.
+- `Se agendo Deal` (col. BH): cualquier valor que empiece con "SI" = con deal; vacío = sin deal.
+- Abiertas = `Etapa` (col. D) distinta de `Cerrada Ganada` y `Cerrada Perdida`.
+- Las columnas se ubican por el nombre del encabezado; si el nombre cambia, se usa la letra.
+  Al pie del reporte se muestran las columnas que se leyeron.
