@@ -120,6 +120,7 @@
   .pct{font-weight:600;}
   td.late{color:var(--bad);}
   .subbar{display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border-soft); font-size:12px; color:var(--text-dim);}
+  .subbar label + select + label{margin-left:8px;}
   .subbar label{font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.4px;}
   .subbar select{font:inherit; font-size:13px; padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text);}
   .mm{color:var(--text-dim); font-weight:400;}
@@ -224,7 +225,7 @@
       </div>
       <div class="subh">Resumen por Vertical y Etapa · # oportunidades / monto (convertido) en millones de USD</div>
       <div class="tscroll"><table id="dealSummary"></table></div>
-      <div class="subh">Detalle</div>
+      <div class="subh" id="dealDetailH">Detalle</div>
       <div class="tscroll tall"><table id="dealTable"></table></div>
     </div>
 
@@ -234,6 +235,8 @@
         <span class="sub" id="noDealSub"></span>
       </div>
       <div class="subbar">
+        <label for="noDealYear">Año de creación</label>
+        <select id="noDealYear"></select>
         <label for="noDealMonth">Mes de creación</label>
         <select id="noDealMonth"></select>
       </div>
@@ -272,7 +275,7 @@ const COLS = {
 };
 
 const S = {
-  opps:[], meta:{}, unit:'ALL', year:'ALL', scope:'abiertas', q:'', noDealMonth:'ALL', open:new Set(),
+  opps:[], meta:{}, unit:'ALL', year:'ALL', scope:'abiertas', q:'', ndYear:'ALL', ndMonth:'ALL', open:new Set(),
   sortDeal:{key:'fecha', dir:-1}, sortNoDeal:{key:'fecha', dir:-1}
 };
 
@@ -526,34 +529,46 @@ function renderConciliacion(){
     `</tbody>`;
 }
 
-// Mismo universo que el cuadro resumen, separado en con deal / sin deal.
-// Sin deal: siempre solo abiertas (sin Cerrada Ganada ni Cerrada Perdida), sin importar el filtro de Etapas,
-// y con su propio filtro de mes de creación.
-const mesKey = d => d ? `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}` : '';
-function noDealsBase(){ return filtered().filter(o => !conDeal(o) && abierta(o)); }
+// Con deal · resumen: todas las etapas, agrupadas en Cerrada Ganada / Cerrada Perdida / Pipe.
+// Con deal · detalle: respeta el filtro de Etapas.
+// Sin deal: siempre solo abiertas y ≥ 500K, con sus propios filtros de año y mes de creación
+// (no usa el año de arriba; sí Unidad Comercial y búsqueda).
+const porUnidad = o => S.unit === 'ALL' || o.unidad === S.unit;
+const dealsAll = () => contextList().filter(o => porUnidad(o) && conDeal(o));
+function noDealsBase(){
+  const q = S.q.toLowerCase();
+  return S.opps.filter(o => porUnidad(o) && !conDeal(o) && pasaMonto(o) && abierta(o) &&
+    (!q || o.id.toLowerCase().includes(q) || o.cuenta.toLowerCase().includes(q) || o.tema.toLowerCase().includes(q)));
+}
+const ndMatch = (o, y, m) => o.fecha && (y === 'ALL' || o.fecha.getUTCFullYear() === y) && (m === 'ALL' || o.fecha.getUTCMonth() + 1 === m);
 function detailLists(){
-  const l = filtered();
-  const noDeals = noDealsBase().filter(o => S.noDealMonth === 'ALL' || mesKey(o.fecha) === S.noDealMonth);
-  return {deals: l.filter(conDeal), noDeals};
+  const noDeals = noDealsBase().filter(o => (S.ndYear === 'ALL' && S.ndMonth === 'ALL') || ndMatch(o, S.ndYear, S.ndMonth));
+  return {deals: filtered().filter(conDeal), noDeals};
 }
-function renderNoDealMonths(){
-  const counts = {};
-  noDealsBase().forEach(o => { const k = mesKey(o.fecha); if (k) counts[k] = (counts[k] || 0) + 1; });
-  const keys = Object.keys(counts).sort().reverse();
-  if (S.noDealMonth !== 'ALL' && !counts[S.noDealMonth]) S.noDealMonth = 'ALL';
-  const label = k => { const [y, m] = k.split('-'); return `${MESES[+m - 1]} ${y}`; };
+function renderNoDealFilters(){
+  const base = noDealsBase();
+  const ys = [...new Set(base.map(o => o.fecha && o.fecha.getUTCFullYear()).filter(Boolean))].sort().reverse();
+  if (S.ndYear !== 'ALL' && !ys.includes(S.ndYear)) S.ndYear = 'ALL';
+  const cy = y => base.filter(o => ndMatch(o, y, 'ALL')).length;
+  document.getElementById('noDealYear').innerHTML = `<option value="ALL">Todos los años</option>` +
+    ys.map(y => `<option value="${y}" ${S.ndYear === y ? 'selected' : ''}>${y} (${cy(y)})</option>`).join('');
+  const cmes = m => base.filter(o => ndMatch(o, S.ndYear, m)).length;
   document.getElementById('noDealMonth').innerHTML = `<option value="ALL">Todos los meses</option>` +
-    keys.map(k => `<option value="${k}" ${S.noDealMonth === k ? 'selected' : ''}>${label(k)} (${counts[k]})</option>`).join('');
+    MESES.map((name, i) => [i + 1, name, cmes(i + 1)]).filter(x => x[2] || S.ndMonth === x[0])
+      .map(([m, name, n]) => `<option value="${m}" ${S.ndMonth === m ? 'selected' : ''}>${name} (${n})</option>`).join('');
 }
+const GRUPOS_DEAL = [
+  ['Cerrada Ganada', o => o.etapa === 'Cerrada Ganada'],
+  ['Cerrada Perdida', o => o.etapa === 'Cerrada Perdida'],
+  ['Pipe', abierta]   // Prospección + Solución + Negociación (y cualquier otra etapa abierta, p. ej. Cierre)
+];
 const verticales = l => [...new Set(l.map(o => o.vertical))].sort((a, b) => a.localeCompare(b, 'es'));
-const etapasDe = l => [...new Set(l.map(o => o.etapa))].sort((x, y) => etapaRank(x) - etapaRank(y) || x.localeCompare(y, 'es'));
 function dealSummaryHTML(deals){
   if (!deals.length) return `<tbody><tr><td class="muted" style="text-align:center;padding:24px">Ninguna oportunidad con deal con este filtro</td></tr></tbody>`;
-  const etapas = etapasDe(deals);
   const cell = l => { const m = l.reduce((s, o) => s + o.monto, 0);
     return `<td class="num mono cm">${cm(l.length, m)}</td>`; };
-  const fila = (label, l, cls='') => `<tr class="${cls}"><td>${esc(label)}</td>${etapas.map(e => cell(l.filter(o => o.etapa === e))).join('')}${cell(l)}</tr>`;
-  return `<thead><tr><th>Vertical</th>${etapas.map(e => `<th class="num">${esc(e)}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>` +
+  const fila = (label, l, cls='') => `<tr class="${cls}"><td>${esc(label)}</td>${GRUPOS_DEAL.map(([, f]) => cell(l.filter(f))).join('')}${cell(l)}</tr>`;
+  return `<thead><tr><th>Vertical</th>${GRUPOS_DEAL.map(([g]) => `<th class="num"${g === 'Pipe' ? ' title="Prospección + Solución + Negociación"' : ''}>${g === 'Pipe' ? 'Pipe <span class="muted" style="text-transform:none;font-weight:400">(Prosp. + Sol. + Neg.)</span>' : esc(g)}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>` +
     verticales(deals).map(v => fila(v, deals.filter(o => o.vertical === v))).join('') +
     fila('Total general', deals, 'total') + `</tbody>`;
 }
@@ -566,16 +581,18 @@ function render(){
   renderBanner(list);
   renderKpis(list);
   renderPivot(base);
-  renderNoDealMonths();
+  renderNoDealFilters();
   const {deals, noDeals} = detailLists();
+  const dAll = dealsAll();
   const sumM = l => l.reduce((s, o) => s + o.monto, 0);
   const scopeTxt = S.unit === 'ALL' ? 'Todas las unidades' : S.unit;
-  document.getElementById('dealCount').textContent = deals.length;
+  document.getElementById('dealCount').textContent = dAll.length;
   document.getElementById('noDealCount').textContent = noDeals.length;
   const etTxt = S.scope === 'abiertas' ? 'solo abiertas' : 'incluye cerradas';
-  document.getElementById('dealSub').textContent = `${scopeTxt} · cualquier monto · ${etTxt} · ${fmtMM(sumM(deals))}`;
+  document.getElementById('dealSub').textContent = `${scopeTxt} · cualquier monto · todas las etapas · ${fmtMM(sumM(dAll))}`;
+  document.getElementById('dealDetailH').textContent = `Detalle · ${deals.length} oportunidades · ${etTxt}`;
   document.getElementById('noDealSub').textContent = `${scopeTxt} · solo Monto (convertido) ≥ USD 500K · solo abiertas · ${fmtMM(sumM(noDeals))} · "Días" = días desde la creación al corte`;
-  document.getElementById('dealSummary').innerHTML = dealSummaryHTML(deals);
+  document.getElementById('dealSummary').innerHTML = dealSummaryHTML(dAll);
   detailTable('dealTable', deals, S.sortDeal, true);
   detailTable('noDealTable', noDeals, S.sortNoDeal, false);
 }
@@ -627,17 +644,17 @@ function exportExcel(){
   }));
   const {deals, noDeals} = detailLists();
   const dealRes = [];
-  const etapas = etapasDe(deals);
+  const dAll = dealsAll();
   const dRow = (v, l) => {
     const r = {'Vertical': v};
-    for (const e of [...etapas, 'Total']){
-      const le = e === 'Total' ? l : l.filter(o => o.etapa === e);
-      r[`${e} #`] = le.length; r[`${e} Monto`] = le.reduce((s, o) => s + o.monto, 0);
+    for (const [g, f] of [...GRUPOS_DEAL, ['Total', () => true]]){
+      const le = l.filter(f);
+      r[`${g} #`] = le.length; r[`${g} Monto`] = le.reduce((s, o) => s + o.monto, 0);
     }
     return r;
   };
-  verticales(deals).forEach(v => dealRes.push(dRow(v, deals.filter(o => o.vertical === v))));
-  if (deals.length) dealRes.push(dRow('Total general', deals));
+  verticales(dAll).forEach(v => dealRes.push(dRow(v, dAll.filter(o => o.vertical === v))));
+  if (dAll.length) dealRes.push(dRow('Total general', dAll));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), 'Resumen');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dealRes), 'Con deal resumen');
@@ -650,7 +667,7 @@ function exportExcel(){
 /* ---------- Carga ---------- */
 function load(wb){
   const {opps, meta} = parseWorkbook(wb);
-  Object.assign(S, {opps, meta, unit:'ALL', year:'ALL', scope:'abiertas', q:'', noDealMonth:'ALL', open:new Set()});
+  Object.assign(S, {opps, meta, unit:'ALL', year:'ALL', scope:'abiertas', q:'', ndYear:'ALL', ndMonth:'ALL', open:new Set()});
   document.getElementById('search').value = '';
   document.getElementById('topSub').textContent =
     `Corte: ${meta.corte ? fmtDate(meta.corte) : 'fecha no detectada'}${meta.autor ? ' · Generado por ' + meta.autor : ''}`;
@@ -687,7 +704,8 @@ dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
 dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('drag'); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
 fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); fileInput.value = ''; });
 
-document.getElementById('noDealMonth').onchange = e => { S.noDealMonth = e.target.value; render(); };
+document.getElementById('noDealYear').onchange = e => { S.ndYear = e.target.value === 'ALL' ? 'ALL' : Number(e.target.value); render(); };
+document.getElementById('noDealMonth').onchange = e => { S.ndMonth = e.target.value === 'ALL' ? 'ALL' : Number(e.target.value); render(); };
 document.getElementById('search').oninput = e => { S.q = e.target.value.trim(); render(); };
 document.getElementById('btnExport').onclick = exportExcel;
 document.getElementById('btnReload').onclick = () => fileInput.click();
