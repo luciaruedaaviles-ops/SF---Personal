@@ -96,8 +96,12 @@ tuvieron deal y cuántas no?
   etapas; al elegir una unidad en el filtro se abre sola.
 - **¿Cómo se llega al resumen?**: conciliación paso a paso para la unidad elegida: todas las
   oportunidades únicas → con monto ≥ 500K → abiertas, con cuántas tienen deal en cada paso.
-- **Detalle Con deal** y **Detalle Sin deal**: fecha de creación, días desde la creación al
-  corte, ID, cuenta, tema, etapa, (tipo de deal) y monto. Ordenables por cualquier columna.
+- **Con deal**: todas las oportunidades con "SI" en `Se agendo Deal`, **de cualquier monto**.
+  Trae un resumen por `Vertical` (col. AC) × Etapa con cantidad y monto, y el detalle (fecha de
+  creación, días, ID, cuenta, tema, etapa, vertical, tipo de deal y monto).
+- **Sin deal**: solo las de **Monto (convertido) ≥ 500K**, con el mismo detalle.
+- Las dos tablas respetan Unidad Comercial, año, Etapas y búsqueda, pero no el filtro de Monto
+  (ese aplica solo al banner, los KPIs y el cuadro resumen). Son ordenables por cualquier columna.
 - **Descargar Excel**: hojas Resumen, Con deal y Sin deal con el filtro activo.
 
 Reglas:

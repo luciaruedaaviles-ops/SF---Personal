@@ -117,6 +117,11 @@
   .stack{display:flex; gap:2px; height:10px; min-width:140px; border-radius:4px; overflow:hidden; background:transparent;}
   .stack span{display:block; height:100%;}
   .pct{font-weight:600;}
+  .subh{padding:12px 16px 8px; font-size:11px; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:.4px; border-top:1px solid var(--border-soft);}
+  .card-h + .subh{border-top:0;}
+  #dealSummary th.grp{text-align:center; border-left:1px solid var(--border);}
+  #dealSummary td.bl, #dealSummary th.bl{border-left:1px solid var(--border-soft);}
+  #dealSummary tr.total td{font-weight:700; background:var(--panel-2); border-top:2px solid var(--border);}
   #conc tr.sel td{background:var(--accent-dim); font-weight:600;}
 
   .tag{display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:var(--panel-2); color:var(--text-dim); white-space:nowrap;}
@@ -216,6 +221,9 @@
         <h2><i class="dot" style="background:var(--deal)"></i>Con deal <span class="count" id="dealCount"></span></h2>
         <span class="sub" id="dealSub"></span>
       </div>
+      <div class="subh">Resumen por Vertical y Etapa · cantidad / monto (convertido)</div>
+      <div class="tscroll"><table id="dealSummary"></table></div>
+      <div class="subh">Detalle</div>
       <div class="tscroll tall"><table id="dealTable"></table></div>
     </div>
 
@@ -252,7 +260,8 @@ const COLS = {
   deal:   {name:'Se agendo Deal',                     letter:'BH', req:true},
   cuenta: {name:'Cuenta',                             letter:null},
   tema:   {name:'Tema',                               letter:null},
-  owner:  {name:'Propietario',                        letter:null}
+  owner:  {name:'Propietario',                        letter:null},
+  vertical:{name:'Vertical',                          letter:'AC'}
 };
 
 const S = {
@@ -333,7 +342,8 @@ function parseWorkbook(wb){
       deal: /^s[ií]\b/i.test(dealRaw) ? dealRaw : SIN_DEAL,
       cuenta: String(get('cuenta') ?? '').trim(),
       tema: String(get('tema') ?? '').trim(),
-      owner: String(get('owner') ?? '').trim()
+      owner: String(get('owner') ?? '').trim(),
+      vertical: String(get('vertical') ?? '').trim() || '(Sin vertical)'
     });
   }
   const all = [...byId.values()];
@@ -342,7 +352,7 @@ function parseWorkbook(wb){
   const ref = meta.corte || new Date();
   opps.forEach(o => { o.dias = o.fecha ? Math.max(0, Math.round((ref - o.fecha) / 864e5)) : null; });
   Object.assign(meta, {lineas, excluidasTipo, idsUnicos: all.length, mayores: all.filter(pasaMonto).length});
-  meta.cols = Object.keys(COLS).filter(k => COLS[k].req).map(k => `${header[idx[k]] || COLS[k].name} (${XLSX.utils.encode_col(idx[k])})`);
+  meta.cols = Object.keys(COLS).filter(k => COLS[k].req || k === 'vertical').map(k => `${header[idx[k]] || COLS[k].name} (${XLSX.utils.encode_col(idx[k])})`);
   return {opps, meta};
 }
 
@@ -462,13 +472,13 @@ function th(label, key, st, cls=''){
 }
 function detailTable(id, list, st, withDeal){
   const showUnit = S.unit === 'ALL';
-  const ncol = 7 + (showUnit ? 1 : 0) + (withDeal ? 1 : 0);
+  const ncol = 7 + (showUnit ? 1 : 0) + (withDeal ? 2 : 0);
   const rows = sortBy(list, st);
   document.getElementById(id).innerHTML =
     `<thead><tr>${th('Fecha de creación','fecha',st)}${th('Días','dias',st,'num')}${th('ID','id',st)}` +
     (showUnit ? th('Unidad Comercial','unidad',st) : '') +
     `${th('Cuenta','cuenta',st)}${th('Tema','tema',st)}${th('Etapa','etapa',st)}` +
-    (withDeal ? th('Deal','deal',st) : '') +
+    (withDeal ? th('Vertical','vertical',st) + th('Deal','deal',st) : '') +
     `${th('Monto (convertido)','monto',st,'num')}</tr></thead><tbody>` +
     (rows.length ? rows.map(o => `<tr>
       <td class="mono" style="white-space:nowrap">${fmtDate(o.fecha)}</td>
@@ -477,7 +487,7 @@ function detailTable(id, list, st, withDeal){
       ${showUnit ? `<td style="white-space:nowrap">${esc(o.unidad)}</td>` : ''}
       <td>${esc(o.cuenta)}</td><td class="wrapcell">${esc(o.tema)}</td>
       <td><span class="tag">${esc(o.etapa)}</span></td>
-      ${withDeal ? `<td><span class="tag deal">${esc(o.deal)}</span></td>` : ''}
+      ${withDeal ? `<td style="white-space:nowrap">${esc(o.vertical)}</td><td><span class="tag deal">${esc(o.deal)}</span></td>` : ''}
       <td class="num mono">${fmtUSD(o.monto)}</td></tr>`).join('')
     : `<tr><td colspan="${ncol}" class="muted" style="text-align:center;padding:24px">Ninguna oportunidad con este filtro</td></tr>`) + `</tbody>`;
 }
@@ -502,6 +512,26 @@ function renderConciliacion(){
     `</tbody>`;
 }
 
+// Con deal: cualquier monto (todas las que dicen SI). Sin deal: solo Monto (convertido) ≥ 500K.
+// Ambas respetan Unidad Comercial, año, búsqueda y Etapas; no dependen del filtro de Monto.
+function detailLists(){
+  const l = contextList().filter(o => (S.unit === 'ALL' || o.unidad === S.unit) && (S.scope === 'todas' || abierta(o)));
+  return {deals: l.filter(conDeal), noDeals: l.filter(o => !conDeal(o) && pasaMonto(o))};
+}
+const verticales = l => [...new Set(l.map(o => o.vertical))].sort((a, b) => a.localeCompare(b, 'es'));
+const etapasDe = l => [...new Set(l.map(o => o.etapa))].sort((x, y) => etapaRank(x) - etapaRank(y) || x.localeCompare(y, 'es'));
+function dealSummaryHTML(deals){
+  if (!deals.length) return `<tbody><tr><td class="muted" style="text-align:center;padding:24px">Ninguna oportunidad con deal con este filtro</td></tr></tbody>`;
+  const etapas = etapasDe(deals);
+  const cell = l => { const m = l.reduce((s, o) => s + o.monto, 0);
+    return l.length ? `<td class="num mono bl">${l.length}</td><td class="num mono">${fmtUSD(m)}</td>` : `<td class="num mono bl muted">—</td><td class="num mono muted">—</td>`; };
+  const fila = (label, l, cls='') => `<tr class="${cls}"><td>${esc(label)}</td>${etapas.map(e => cell(l.filter(o => o.etapa === e))).join('')}${cell(l)}</tr>`;
+  return `<thead><tr><th rowspan="2">Vertical</th>${etapas.map(e => `<th colspan="2" class="grp">${esc(e)}</th>`).join('')}<th colspan="2" class="grp">Total</th></tr>` +
+    `<tr>${[...etapas, 'Total'].map(() => `<th class="num bl">#</th><th class="num">Monto</th>`).join('')}</tr></thead><tbody>` +
+    verticales(deals).map(v => fila(v, deals.filter(o => o.vertical === v))).join('') +
+    fila('Total general', deals, 'total') + `</tbody>`;
+}
+
 function render(){
   const base = baseList();
   renderConciliacion();
@@ -510,13 +540,15 @@ function render(){
   renderBanner(list);
   renderKpis(list);
   renderPivot(base);
-  const deals = list.filter(conDeal), noDeals = list.filter(o => !conDeal(o));
+  const {deals, noDeals} = detailLists();
   const sumM = l => l.reduce((s, o) => s + o.monto, 0);
   const scopeTxt = S.unit === 'ALL' ? 'Todas las unidades' : S.unit;
   document.getElementById('dealCount').textContent = deals.length;
   document.getElementById('noDealCount').textContent = noDeals.length;
-  document.getElementById('dealSub').textContent = `${scopeTxt} · ${fmtUSD(sumM(deals))}`;
-  document.getElementById('noDealSub').textContent = `${scopeTxt} · ${fmtUSD(sumM(noDeals))} · "Días" = días desde la creación al corte`;
+  const etTxt = S.scope === 'abiertas' ? 'solo abiertas' : 'incluye cerradas';
+  document.getElementById('dealSub').textContent = `${scopeTxt} · cualquier monto · ${etTxt} · ${fmtUSD(sumM(deals))}`;
+  document.getElementById('noDealSub').textContent = `${scopeTxt} · solo Monto (convertido) ≥ USD 500K · ${etTxt} · ${fmtUSD(sumM(noDeals))} · "Días" = días desde la creación al corte`;
+  document.getElementById('dealSummary').innerHTML = dealSummaryHTML(deals);
   detailTable('dealTable', deals, S.sortDeal, true);
   detailTable('noDealTable', noDeals, S.sortNoDeal, false);
 }
@@ -563,14 +595,27 @@ function exportExcel(){
   resumen.push(row('Total general', '', agg(base.filter(o => units.includes(o.unidad)), tipos)));
   const det = (l, st) => sortBy(l, st).map(o => ({
     'Fecha de creación': o.fecha ? new Date(o.fecha.getUTCFullYear(), o.fecha.getUTCMonth(), o.fecha.getUTCDate()) : '',
-    'Días desde creación': o.dias, 'ID Oportunidad': o.id, 'Unidad Comercial': o.unidad, 'Cuenta': o.cuenta, 'Tema': o.tema,
+    'Días desde creación': o.dias, 'ID Oportunidad': o.id, 'Unidad Comercial': o.unidad, 'Vertical': o.vertical, 'Cuenta': o.cuenta, 'Tema': o.tema,
     'Etapa': o.etapa, 'Se agendó Deal': conDeal(o) ? o.deal : '', 'Propietario': o.owner, 'Monto (convertido)': o.monto
   }));
-  const list = filtered();
+  const {deals, noDeals} = detailLists();
+  const dealRes = [];
+  const etapas = etapasDe(deals);
+  const dRow = (v, l) => {
+    const r = {'Vertical': v};
+    for (const e of [...etapas, 'Total']){
+      const le = e === 'Total' ? l : l.filter(o => o.etapa === e);
+      r[`${e} #`] = le.length; r[`${e} Monto`] = le.reduce((s, o) => s + o.monto, 0);
+    }
+    return r;
+  };
+  verticales(deals).forEach(v => dealRes.push(dRow(v, deals.filter(o => o.vertical === v))));
+  if (deals.length) dealRes.push(dRow('Total general', deals));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), 'Resumen');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(det(list.filter(conDeal), S.sortDeal), {cellDates:true}), 'Con deal');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(det(list.filter(o => !conDeal(o)), S.sortNoDeal), {cellDates:true}), 'Sin deal');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dealRes), 'Con deal resumen');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(det(deals, S.sortDeal), {cellDates:true}), 'Con deal');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(det(noDeals, S.sortNoDeal), {cellDates:true}), 'Sin deal ≥ 500K');
   const tag = (S.meta.corte || new Date()).toISOString().slice(0, 10);
   XLSX.writeFile(wb, `Deals_${S.monto === 'todos' ? 'todos' : '500K'}_${tag}${S.unit === 'ALL' ? '' : '_' + S.unit.replace(/[^\w]+/g, '_')}.xlsx`);
 }
@@ -625,6 +670,7 @@ document.getElementById('pivot').addEventListener('click', e => {
   render();
 });
 wireSort('dealTable', 'sortDeal');
+// (el resumen de Con deal no se ordena)
 wireSort('noDealTable', 'sortNoDeal');
 
 // Tooltip de las barras de distribución
