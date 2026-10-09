@@ -98,7 +98,9 @@ Reglas:
 - Solo `Tipo de registro de la oportunidad` (col. Y) = `Oportunidad Estándar` u
   `Oportunidad Fast Track` (mismo filtro que el tablero principal; quedan fuera las variantes
   "Secundaria").
+- Solo oportunidades **abiertas**: se excluyen las de `Etapa` (col. D) `Cerrada Ganada` y
+  `Cerrada Perdida`.
 - Filtros: año de creación, Unidad Comercial y búsqueda por ID, cuenta o tema. "Descargar Excel"
   exporta las dos tablas con el filtro activo.
 - Las columnas se ubican por el nombre del encabezado; si el nombre cambia, se usa la letra
-  (B, L, M, BF, Y). Al pie del reporte se muestran las columnas que se leyeron.
+  (B, D, L, M, BF, Y). Al pie del reporte se muestran las columnas que se leyeron.

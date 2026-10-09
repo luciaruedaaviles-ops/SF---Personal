@@ -106,7 +106,7 @@
 
 <div class="topbar">
   <div>
-    <div class="t1">Oportunidades ≥ USD 500K</div>
+    <div class="t1">Oportunidades abiertas ≥ USD 500K</div>
     <div class="t2" id="topSub">Pipe con productos FCST · corte semanal</div>
   </div>
   <div id="topActions" class="hidden" style="display:flex; gap:8px;">
@@ -128,7 +128,7 @@
     <div class="drop-error hidden" id="dropError"></div>
     <div class="rules">
       <b>Columnas que usa:</b> ID Oportunidad (B) · Fecha de creación (L) · Unidad de Comercial (M) · Monto (convertido) (BF) · Tipo de registro de la oportunidad (Y).<br>
-      <b>Reglas:</b> solo Tipo de registro = Oportunidad Estándar u Oportunidad Fast Track · una sola fila por ID Oportunidad (el monto se repite en cada línea de producto, así que no se suma) · se quedan solo las de Monto (convertido) ≥ 500,000.
+      <b>Reglas:</b> solo Tipo de registro = Oportunidad Estándar u Oportunidad Fast Track · solo abiertas (sin Cerrada Ganada ni Cerrada Perdida, col. D Etapa) · una sola fila por ID Oportunidad (el monto se repite en cada línea de producto, así que no se suma) · se quedan solo las de Monto (convertido) ≥ 500,000.
     </div>
   </div>
 
@@ -174,6 +174,8 @@
 const UMBRAL = 500000;
 // Solo estos tipos de registro (excluye las variantes "Secundaria", venta indirecta).
 const TIPO_REGISTRO_PERMITIDO = new Set(['Oportunidad Estándar', 'Oportunidad Fast Track']);
+// Solo oportunidades abiertas: se excluyen Cerrada Ganada y Cerrada Perdida.
+const ETAPAS_CERRADAS = new Set(['Cerrada Ganada', 'Cerrada Perdida']);
 // Se buscan por nombre de encabezado; si Salesforce cambia el nombre, se usa la letra de columna.
 const COLS = {
   id:      {name:'ID Oportunidad',      letter:'B'},
@@ -181,7 +183,7 @@ const COLS = {
   unidad:  {name:'Unidad de Comercial', letter:'M'},
   monto:   {name:'Monto (convertido)',  letter:'BF'},
   tipo:    {name:'Tipo de registro de la oportunidad', letter:'Y'},
-  etapa:   {name:'Etapa',               letter:null},
+  etapa:   {name:'Etapa',               letter:'D'},
   cuenta:  {name:'Cuenta',              letter:null},
   tema:    {name:'Tema',                letter:null},
   owner:   {name:'Propietario',         letter:null}
@@ -224,7 +226,7 @@ function parseWorkbook(wb){
     if (i < 0 && c.letter) i = XLSX.utils.decode_col(c.letter);
     idx[k] = i;
   }
-  for (const k of ['id','fecha','unidad','monto','tipo']){
+  for (const k of ['id','fecha','unidad','monto','tipo','etapa']){
     if (idx[k] < 0) throw new Error('No encontré la columna "' + COLS[k].name + '".');
   }
 
@@ -241,13 +243,14 @@ function parseWorkbook(wb){
   }
 
   const byId = new Map();
-  let lineas = 0, excluidas = 0;
+  let lineas = 0, excluidas = 0, cerradas = 0;
   for (let r = hdrRow + 1; r < aoa.length; r++){
     const row = aoa[r]; if (!row) continue;
     const id = row[idx.id];
     if (id == null || String(id).trim() === '') continue;
     lineas++;
     if (!TIPO_REGISTRO_PERMITIDO.has(String(row[idx.tipo] ?? '').trim())){ excluidas++; continue; }
+    if (ETAPAS_CERRADAS.has(String(row[idx.etapa] ?? '').trim())){ cerradas++; continue; }
     const key = String(id).trim();
     if (byId.has(key)) continue; // una fila por ID: el monto es de la oportunidad, no de la línea
     const get = k => idx[k] >= 0 ? row[idx[k]] : null;
@@ -264,9 +267,9 @@ function parseWorkbook(wb){
   }
   const all = [...byId.values()];
   const opps = all.filter(o => isFinite(o.monto) && o.monto >= UMBRAL);
-  meta.lineas = lineas; meta.excluidas = excluidas; meta.idsUnicos = all.length;
-  meta.headers = {id:header[idx.id], fecha:header[idx.fecha], unidad:header[idx.unidad], monto:header[idx.monto], tipo:header[idx.tipo]};
-  meta.letters = {id:XLSX.utils.encode_col(idx.id), fecha:XLSX.utils.encode_col(idx.fecha), unidad:XLSX.utils.encode_col(idx.unidad), monto:XLSX.utils.encode_col(idx.monto), tipo:XLSX.utils.encode_col(idx.tipo)};
+  meta.lineas = lineas; meta.excluidas = excluidas; meta.cerradas = cerradas; meta.idsUnicos = all.length;
+  meta.headers = {id:header[idx.id], fecha:header[idx.fecha], unidad:header[idx.unidad], monto:header[idx.monto], tipo:header[idx.tipo], etapa:header[idx.etapa]};
+  meta.letters = {id:XLSX.utils.encode_col(idx.id), fecha:XLSX.utils.encode_col(idx.fecha), unidad:XLSX.utils.encode_col(idx.unidad), monto:XLSX.utils.encode_col(idx.monto), tipo:XLSX.utils.encode_col(idx.tipo), etapa:XLSX.utils.encode_col(idx.etapa)};
   return {opps, meta};
 }
 
@@ -315,7 +318,7 @@ function render(){
   const ys = years();
 
   document.getElementById('kpis').innerHTML = [
-    {l:'Oportunidades ≥ 500K', v:list.length.toLocaleString('es-MX'), s:'IDs únicos con el filtro actual'},
+    {l:'Abiertas ≥ 500K', v:list.length.toLocaleString('es-MX'), s:'IDs únicos con el filtro actual'},
     {l:'Monto total', v:fmtM(total), s:'Monto (convertido), USD'},
     {l:'Monto promedio', v:list.length ? fmtM(total / list.length) : '—', s:'por oportunidad'},
     {l:'Unidades comerciales', v:units.length, s:'con al menos una oportunidad'}
@@ -403,8 +406,8 @@ function load(wb){
     `Corte: ${meta.corte ? fmtDate(meta.corte) : 'fecha no detectada'}${meta.autor ? ' · Generado por ' + meta.autor : ''}`;
   const h = meta.headers, L = meta.letters;
   document.getElementById('foot').innerHTML =
-    `<b>Columnas leídas:</b> ${esc(h.id)} (${L.id}) · ${esc(h.fecha)} (${L.fecha}) · ${esc(h.unidad)} (${L.unidad}) · ${esc(h.monto)} (${L.monto}) · ${esc(h.tipo)} (${L.tipo}).<br>` +
-    `${meta.lineas.toLocaleString('es-MX')} líneas de producto → ${meta.excluidas.toLocaleString('es-MX')} excluidas por Tipo de registro (solo Oportunidad Estándar y Oportunidad Fast Track) → ${meta.idsUnicos.toLocaleString('es-MX')} IDs únicos → ` +
+    `<b>Columnas leídas:</b> ${esc(h.id)} (${L.id}) · ${esc(h.fecha)} (${L.fecha}) · ${esc(h.unidad)} (${L.unidad}) · ${esc(h.monto)} (${L.monto}) · ${esc(h.tipo)} (${L.tipo}) · ${esc(h.etapa)} (${L.etapa}).<br>` +
+    `${meta.lineas.toLocaleString('es-MX')} líneas de producto → ${meta.excluidas.toLocaleString('es-MX')} excluidas por Tipo de registro (solo Oportunidad Estándar y Oportunidad Fast Track) → ${meta.cerradas.toLocaleString('es-MX')} excluidas por estar cerradas (Cerrada Ganada / Cerrada Perdida) → ${meta.idsUnicos.toLocaleString('es-MX')} IDs únicos → ` +
     `${opps.length.toLocaleString('es-MX')} con Monto (convertido) ≥ ${UMBRAL.toLocaleString('es-MX')}. Hoja: "${esc(meta.sheetName)}".`;
   renderFilters(); render();
   document.getElementById('dropScreen').classList.add('hidden');
