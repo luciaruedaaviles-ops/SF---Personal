@@ -101,7 +101,8 @@
   th.num,td.num{text-align:right;}
   th .arrow{color:var(--accent);}
   td{padding:8px 12px; border-top:1px solid var(--border-soft); vertical-align:top;}
-  td.wrapcell{min-width:200px; max-width:320px;}
+  td.wrapcell{min-width:180px; max-width:260px;}
+  td.cta{min-width:140px; max-width:200px;}
   .muted{color:var(--text-faint);}
 
   /* Cuadro resumen */
@@ -117,10 +118,10 @@
   .stack{display:flex; gap:2px; height:10px; min-width:140px; border-radius:4px; overflow:hidden; background:transparent;}
   .stack span{display:block; height:100%;}
   .pct{font-weight:600;}
+  .mm{color:var(--text-dim); font-weight:400;}
+  td.cm{white-space:nowrap;}
   .subh{padding:12px 16px 8px; font-size:11px; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:.4px; border-top:1px solid var(--border-soft);}
   .card-h + .subh{border-top:0;}
-  #dealSummary th.grp{text-align:center; border-left:1px solid var(--border);}
-  #dealSummary td.bl, #dealSummary th.bl{border-left:1px solid var(--border-soft);}
   #dealSummary tr.total td{font-weight:700; background:var(--panel-2); border-top:2px solid var(--border);}
   #conc tr.sel td{background:var(--accent-dim); font-weight:600;}
 
@@ -198,7 +199,7 @@
 
     <div class="card">
       <div class="card-h">
-        <h2 id="pivotTitle">Cuadro resumen · # de oportunidades</h2>
+        <h2 id="pivotTitle">Cuadro resumen</h2>
         <div class="legend">
           <span><i class="dot" style="background:var(--deal)"></i>SI</span>
           <span><i class="dot" style="background:var(--corp)"></i>SI - Corporativo</span>
@@ -221,7 +222,7 @@
         <h2><i class="dot" style="background:var(--deal)"></i>Con deal <span class="count" id="dealCount"></span></h2>
         <span class="sub" id="dealSub"></span>
       </div>
-      <div class="subh">Resumen por Vertical y Etapa · cantidad / monto (convertido)</div>
+      <div class="subh">Resumen por Vertical y Etapa · # oportunidades / monto (convertido) en millones de USD</div>
       <div class="tscroll"><table id="dealSummary"></table></div>
       <div class="subh">Detalle</div>
       <div class="tscroll tall"><table id="dealTable"></table></div>
@@ -270,6 +271,10 @@ const S = {
 };
 
 const fmtUSD = v => '$' + Math.round(v).toLocaleString('es-MX');
+// Millones de dólares para las tablas: 1 decimal en resúmenes, 2 en el detalle por oportunidad.
+const fmtMM = (v, d = 1) => '$' + (v / 1e6).toLocaleString('es-MX', {minimumFractionDigits:d, maximumFractionDigits:d}) + 'M';
+// Cantidad y monto en una sola celda: "2 / $3.0M".
+const cm = (n, m) => n ? `${fmtN(n)} <span class="mm">/ ${fmtMM(m)}</span>` : '<span class="muted">—</span>';
 const fmtN = v => v.toLocaleString('es-MX');
 const fmtPct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
 const fmtDate = d => d ? d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric', timeZone:'UTC'}) : '—';
@@ -381,10 +386,10 @@ const years = () => [...new Set(S.opps.map(o => o.fecha && o.fecha.getUTCFullYea
 
 /* ---------- Render ---------- */
 function agg(list, tipos){
-  const r = {n:list.length, monto:0, deal:0, montoDeal:0, por:{}};
-  tipos.forEach(t => r.por[t] = 0); r.por[SIN_DEAL] = 0;
+  const r = {n:list.length, monto:0, deal:0, montoDeal:0, por:{}, porM:{}};
+  tipos.forEach(t => { r.por[t] = 0; r.porM[t] = 0; }); r.por[SIN_DEAL] = 0; r.porM[SIN_DEAL] = 0;
   for (const o of list){
-    r.monto += o.monto; r.por[o.deal] = (r.por[o.deal] || 0) + 1;
+    r.monto += o.monto; r.por[o.deal] = (r.por[o.deal] || 0) + 1; r.porM[o.deal] = (r.porM[o.deal] || 0) + o.monto;
     if (conDeal(o)){ r.deal++; r.montoDeal += o.monto; }
   }
   return r;
@@ -430,20 +435,20 @@ function renderPivot(base){
   const tipos = dealTipos(base);
   const units = S.unit === 'ALL' ? unidades() : [S.unit];
   const cols = [...tipos, SIN_DEAL];
-  const cells = a => cols.map(t => `<td class="num mono">${a.por[t] || '<span class="muted">—</span>'}</td>`).join('') +
-    `<td class="num mono"><b>${a.n}</b></td><td class="num mono pct">${fmtPct(a.deal, a.n)}</td>`;
+  const cells = a => cols.map(t => `<td class="num mono cm">${cm(a.por[t], a.porM[t])}</td>`).join('') +
+    `<td class="num mono cm"><b>${cm(a.n, a.monto)}</b></td><td class="num mono pct">${fmtPct(a.deal, a.n)}</td>`;
   let body = '';
   for (const u of units){
     const lu = base.filter(o => o.unidad === u);
     if (!lu.length) continue;
     const a = agg(lu, tipos);
     const isOpen = S.unit !== 'ALL' || S.open.has(u);
-    body += `<tr class="unit ${isOpen ? 'open' : ''}" data-u="${esc(u)}"><td>${esc(u)}</td>${cells(a)}<td>${stackHTML(a, tipos, u)}</td><td class="num mono">${fmtUSD(a.monto)}</td></tr>`;
+    body += `<tr class="unit ${isOpen ? 'open' : ''}" data-u="${esc(u)}"><td>${esc(u)}</td>${cells(a)}<td>${stackHTML(a, tipos, u)}</td></tr>`;
     if (isOpen){
       const etapas = [...new Set(lu.map(o => o.etapa))].sort((x, y) => etapaRank(x) - etapaRank(y) || x.localeCompare(y, 'es'));
       for (const e of etapas){
         const ae = agg(lu.filter(o => o.etapa === e), tipos);
-        body += `<tr class="etapa"><td>${esc(e)}</td>${cells(ae)}<td>${stackHTML(ae, tipos, e)}</td><td class="num mono">${fmtUSD(ae.monto)}</td></tr>`;
+        body += `<tr class="etapa"><td>${esc(e)}</td>${cells(ae)}<td>${stackHTML(ae, tipos, e)}</td></tr>`;
       }
     }
   }
@@ -451,9 +456,9 @@ function renderPivot(base){
   const at = agg(lt, tipos);
   document.getElementById('pivot').innerHTML =
     `<thead><tr><th>Unidad Comercial / Etapa</th>${cols.map(t => `<th class="num">${esc(t)}</th>`).join('')}` +
-    `<th class="num">Total</th><th class="num">% con deal</th><th>Distribución</th><th class="num">Monto (convertido)</th></tr></thead>` +
-    `<tbody>${body || `<tr><td colspan="${cols.length + 5}" class="muted" style="text-align:center;padding:24px">Sin oportunidades con este filtro</td></tr>`}` +
-    (lt.length ? `<tr class="total"><td>Total general</td>${cells(at)}<td>${stackHTML(at, tipos, 'Total')}</td><td class="num mono">${fmtUSD(at.monto)}</td></tr>` : '') +
+    `<th class="num">Total</th><th class="num">% con deal</th><th>Distribución</th></tr></thead>` +
+    `<tbody>${body || `<tr><td colspan="${cols.length + 4}" class="muted" style="text-align:center;padding:24px">Sin oportunidades con este filtro</td></tr>`}` +
+    (lt.length ? `<tr class="total"><td>Total general</td>${cells(at)}<td>${stackHTML(at, tipos, 'Total')}</td></tr>` : '') +
     `</tbody>`;
 }
 
@@ -472,23 +477,23 @@ function th(label, key, st, cls=''){
 }
 function detailTable(id, list, st, withDeal){
   const showUnit = S.unit === 'ALL';
-  const ncol = 7 + (showUnit ? 1 : 0) + (withDeal ? 2 : 0);
+  const ncol = 7 + (showUnit ? 1 : 0) + (withDeal ? (showUnit ? 1 : 2) : 0);
   const rows = sortBy(list, st);
   document.getElementById(id).innerHTML =
     `<thead><tr>${th('Fecha de creación','fecha',st)}${th('Días','dias',st,'num')}${th('ID','id',st)}` +
     (showUnit ? th('Unidad Comercial','unidad',st) : '') +
     `${th('Cuenta','cuenta',st)}${th('Tema','tema',st)}${th('Etapa','etapa',st)}` +
-    (withDeal ? th('Vertical','vertical',st) + th('Deal','deal',st) : '') +
-    `${th('Monto (convertido)','monto',st,'num')}</tr></thead><tbody>` +
+    (withDeal ? (showUnit ? '' : th('Vertical','vertical',st)) + th('Deal','deal',st) : '') +
+    `${th('Monto (USD M)','monto',st,'num')}</tr></thead><tbody>` +
     (rows.length ? rows.map(o => `<tr>
       <td class="mono" style="white-space:nowrap">${fmtDate(o.fecha)}</td>
       <td class="num mono muted">${o.dias ?? '—'}</td>
       <td class="mono">${esc(o.id)}</td>
-      ${showUnit ? `<td style="white-space:nowrap">${esc(o.unidad)}</td>` : ''}
-      <td>${esc(o.cuenta)}</td><td class="wrapcell">${esc(o.tema)}</td>
+      ${showUnit ? `<td style="white-space:nowrap">${esc(o.unidad)}${withDeal && o.vertical !== o.unidad ? `<div class="muted" style="font-size:11.5px">Vertical: ${esc(o.vertical)}</div>` : ''}</td>` : ''}
+      <td class="cta">${esc(o.cuenta)}</td><td class="wrapcell">${esc(o.tema)}</td>
       <td><span class="tag">${esc(o.etapa)}</span></td>
-      ${withDeal ? `<td style="white-space:nowrap">${esc(o.vertical)}</td><td><span class="tag deal">${esc(o.deal)}</span></td>` : ''}
-      <td class="num mono">${fmtUSD(o.monto)}</td></tr>`).join('')
+      ${withDeal ? `${showUnit ? '' : `<td style="white-space:nowrap">${esc(o.vertical)}</td>`}<td><span class="tag deal">${esc(o.deal)}</span></td>` : ''}
+      <td class="num mono">${fmtMM(o.monto, 2)}</td></tr>`).join('')
     : `<tr><td colspan="${ncol}" class="muted" style="text-align:center;padding:24px">Ninguna oportunidad con este filtro</td></tr>`) + `</tbody>`;
 }
 
@@ -505,10 +510,10 @@ function renderConciliacion(){
   const where = S.unit === 'ALL' ? 'Todas las unidades' : S.unit;
   document.getElementById('concSub').textContent = `${where}${S.year === 'ALL' ? '' : ' · creadas en ' + S.year} · cada fila cuenta IDs únicos`;
   document.getElementById('conc').innerHTML =
-    `<thead><tr><th>Paso</th><th class="num">Oportunidades</th><th class="num">Con deal (SI)</th><th class="num">Sin deal</th><th class="num">Monto con deal</th></tr></thead><tbody>` +
+    `<thead><tr><th>Paso</th><th class="num">Oportunidades</th><th class="num">Con deal (SI)</th><th class="num">Sin deal</th></tr></thead><tbody>` +
     pasos.map(([label, l], i) => { const a = agg(l, []);
       return `<tr${i === sel ? ' class="sel"' : ''}><td>${label}${i === sel ? ' <span class="tag deal">lo que muestra el resumen</span>' : ''}</td>` +
-        `<td class="num mono">${fmtN(a.n)}</td><td class="num mono"><b>${fmtN(a.deal)}</b></td><td class="num mono">${fmtN(a.n - a.deal)}</td><td class="num mono">${fmtUSD(a.montoDeal)}</td></tr>`; }).join('') +
+        `<td class="num mono cm">${cm(a.n, a.monto)}</td><td class="num mono cm"><b>${cm(a.deal, a.montoDeal)}</b></td><td class="num mono cm">${cm(a.n - a.deal, a.monto - a.montoDeal)}</td></tr>`; }).join('') +
     `</tbody>`;
 }
 
@@ -524,10 +529,9 @@ function dealSummaryHTML(deals){
   if (!deals.length) return `<tbody><tr><td class="muted" style="text-align:center;padding:24px">Ninguna oportunidad con deal con este filtro</td></tr></tbody>`;
   const etapas = etapasDe(deals);
   const cell = l => { const m = l.reduce((s, o) => s + o.monto, 0);
-    return l.length ? `<td class="num mono bl">${l.length}</td><td class="num mono">${fmtUSD(m)}</td>` : `<td class="num mono bl muted">—</td><td class="num mono muted">—</td>`; };
+    return `<td class="num mono cm">${cm(l.length, m)}</td>`; };
   const fila = (label, l, cls='') => `<tr class="${cls}"><td>${esc(label)}</td>${etapas.map(e => cell(l.filter(o => o.etapa === e))).join('')}${cell(l)}</tr>`;
-  return `<thead><tr><th rowspan="2">Vertical</th>${etapas.map(e => `<th colspan="2" class="grp">${esc(e)}</th>`).join('')}<th colspan="2" class="grp">Total</th></tr>` +
-    `<tr>${[...etapas, 'Total'].map(() => `<th class="num bl">#</th><th class="num">Monto</th>`).join('')}</tr></thead><tbody>` +
+  return `<thead><tr><th>Vertical</th>${etapas.map(e => `<th class="num">${esc(e)}</th>`).join('')}<th class="num">Total</th></tr></thead><tbody>` +
     verticales(deals).map(v => fila(v, deals.filter(o => o.vertical === v))).join('') +
     fila('Total general', deals, 'total') + `</tbody>`;
 }
@@ -535,7 +539,7 @@ function dealSummaryHTML(deals){
 function render(){
   const base = baseList();
   renderConciliacion();
-  document.getElementById('pivotTitle').textContent = `Cuadro resumen · # de oportunidades ${(S.scope === 'abiertas' ? 'abiertas ' : '') + montoTxt()}`.trim();
+  document.getElementById('pivotTitle').textContent = `Cuadro resumen · # oportunidades / monto en millones de USD · ${(S.scope === 'abiertas' ? 'abiertas ' : '') + montoTxt()}`.trim().replace(/ ·$/, '');
   const list = filtered();
   renderBanner(list);
   renderKpis(list);
@@ -546,8 +550,8 @@ function render(){
   document.getElementById('dealCount').textContent = deals.length;
   document.getElementById('noDealCount').textContent = noDeals.length;
   const etTxt = S.scope === 'abiertas' ? 'solo abiertas' : 'incluye cerradas';
-  document.getElementById('dealSub').textContent = `${scopeTxt} · cualquier monto · ${etTxt} · ${fmtUSD(sumM(deals))}`;
-  document.getElementById('noDealSub').textContent = `${scopeTxt} · solo Monto (convertido) ≥ USD 500K · ${etTxt} · ${fmtUSD(sumM(noDeals))} · "Días" = días desde la creación al corte`;
+  document.getElementById('dealSub').textContent = `${scopeTxt} · cualquier monto · ${etTxt} · ${fmtMM(sumM(deals))}`;
+  document.getElementById('noDealSub').textContent = `${scopeTxt} · solo Monto (convertido) ≥ USD 500K · ${etTxt} · ${fmtMM(sumM(noDeals))} · "Días" = días desde la creación al corte`;
   document.getElementById('dealSummary').innerHTML = dealSummaryHTML(deals);
   detailTable('dealTable', deals, S.sortDeal, true);
   detailTable('noDealTable', noDeals, S.sortNoDeal, false);

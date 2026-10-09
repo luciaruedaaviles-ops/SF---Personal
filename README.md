@@ -114,3 +114,6 @@ Reglas:
 - Abiertas = `Etapa` (col. D) distinta de `Cerrada Ganada` y `Cerrada Perdida`.
 - Las columnas se ubican por el nombre del encabezado; si el nombre cambia, se usa la letra.
   Al pie del reporte se muestran las columnas que se leyeron.
+- Formato de las tablas: cantidad y monto en una sola celda, con el monto en millones de USD
+  (`2 / $3.0M`). El detalle por oportunidad muestra el monto en millones con 2 decimales. La
+  descarga a Excel conserva cantidad y monto en columnas separadas, con el monto completo.
