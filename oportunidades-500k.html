@@ -5,151 +5,186 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Seguimiento de Deal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@500;600;700&family=Roboto:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
-    --bg:#F6F7F9; --panel:#FFFFFF; --panel-2:#F2F4F8;
-    --border:#E1E5EC; --border-soft:#EDF0F5;
-    --text:#12151B; --text-dim:#5B6472; --text-faint:#8A93A3;
-    --accent:#1F5DF5; --accent-dim:#DCE6FE;
-    --deal:#2a78d6; --corp:#1baf7a; --nodeal:#C9CED8;
-    --good:#1D9A63; --bad:#E14C3D;
-    --radius:12px;
+    --bg:#F3F5FA; --panel:#FFFFFF; --panel-2:#F6F8FC; --panel-3:#EEF2FA;
+    --border:#E4E8F1; --border-soft:#EEF1F7;
+    --text:#1A1D29; --text-dim:#5E6578; --text-faint:#8E95A8;
+    --accent:#3B5BFD; --accent-2:#7A5CFA; --accent-dim:#E9EDFF; --accent-ink:#2D47D6;
+    --deal:#2a78d6; --corp:#1baf7a; --nodeal:#eda100;
+    --deal-bg:#E7F0FC; --corp-bg:#E3F6EE; --nodeal-bg:#FDF3DC;
+    --good:#16A06A; --good-bg:#E3F6EE; --bad:#E5484D; --bad-bg:#FDECEC;
+    --violet-bg:#F0ECFF; --violet:#6A4BE0;
+    --shadow:0 1px 2px rgba(20,30,60,.04), 0 6px 20px rgba(20,30,60,.06);
+    --radius:18px;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --bg:#0F1218; --panel:#161A22; --panel-2:#1E2330;
-      --border:#2A3140; --border-soft:#222836;
-      --text:#E8EBF1; --text-dim:#A3ACBB; --text-faint:#6B7486;
-      --accent:#6B93FF; --accent-dim:#22305A;
-      --deal:#3987e5; --corp:#199e70; --nodeal:#3A4252;
-      --good:#3CC489; --bad:#FF7A6B;
+      --bg:#0E1117; --panel:#161A23; --panel-2:#1B202B; --panel-3:#212735;
+      --border:#2A3141; --border-soft:#232937;
+      --text:#ECEFF5; --text-dim:#A6AEC0; --text-faint:#6F7890;
+      --accent:#7B93FF; --accent-2:#A08BFF; --accent-dim:#232C52; --accent-ink:#A9B8FF;
+      --deal:#3987e5; --corp:#199e70; --nodeal:#c98500;
+      --deal-bg:#1C2A42; --corp-bg:#15302A; --nodeal-bg:#352A12;
+      --good:#3CC489; --good-bg:#15302A; --bad:#FF7A7E; --bad-bg:#3A1C1F;
+      --violet-bg:#2A2347; --violet:#B3A2FF;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
     }
   }
   :root[data-theme="dark"]{
-    --bg:#0F1218; --panel:#161A22; --panel-2:#1E2330;
-    --border:#2A3140; --border-soft:#222836;
-    --text:#E8EBF1; --text-dim:#A3ACBB; --text-faint:#6B7486;
-    --accent:#6B93FF; --accent-dim:#22305A;
-    --deal:#3987e5; --corp:#199e70; --nodeal:#3A4252;
-    --good:#3CC489; --bad:#FF7A6B;
+    --bg:#0E1117; --panel:#161A23; --panel-2:#1B202B; --panel-3:#212735;
+    --border:#2A3141; --border-soft:#232937;
+    --text:#ECEFF5; --text-dim:#A6AEC0; --text-faint:#6F7890;
+    --accent:#7B93FF; --accent-2:#A08BFF; --accent-dim:#232C52; --accent-ink:#A9B8FF;
+    --deal:#3987e5; --corp:#199e70; --nodeal:#c98500;
+    --deal-bg:#1C2A42; --corp-bg:#15302A; --nodeal-bg:#352A12;
+    --good:#3CC489; --good-bg:#15302A; --bad:#FF7A7E; --bad-bg:#3A1C1F;
+    --violet-bg:#2A2347; --violet:#B3A2FF;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
-  body{background:var(--bg); color:var(--text); font-family:'Roboto',Arial,system-ui,sans-serif; -webkit-font-smoothing:antialiased; min-height:100vh;}
-  .mono{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums;}
+  body{background:var(--bg); color:var(--text); font-family:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif; font-size:14px; -webkit-font-smoothing:antialiased; min-height:100vh;}
+  .mono{font-variant-numeric:tabular-nums;}
   .hidden{display:none !important;}
 
+  /* Encabezado */
   .topbar{position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-    padding:14px 28px; background:var(--panel); border-bottom:1px solid var(--border-soft);}
-  .topbar .t1{font-family:'Kumbh Sans'; font-weight:600; font-size:16px;}
-  .topbar .t2{font-size:11.5px; color:var(--text-dim); margin-top:2px;}
-  .btn{font:inherit; font-size:12px; font-weight:500; padding:7px 12px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text); cursor:pointer;}
-  .btn:hover{border-color:var(--accent); color:var(--accent);}
-  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
-  .btn.primary:hover{opacity:.9; color:#fff;}
+    padding:16px 32px; color:#fff; background:linear-gradient(110deg, #2E4BF0 0%, #5B4BF5 55%, #8A56F2 100%); box-shadow:0 4px 18px rgba(59,91,253,.25);}
+  .brand{display:flex; align-items:center; gap:12px;}
+  .logo{width:38px; height:38px; border-radius:12px; background:rgba(255,255,255,.18); display:grid; place-items:center; flex:none;}
+  .topbar .t1{font-weight:700; font-size:17px; letter-spacing:-.2px;}
+  .topbar .t2{font-size:12px; opacity:.85; margin-top:2px;}
+  .btn{font:inherit; font-size:13px; font-weight:600; padding:9px 16px; border-radius:999px; border:1px solid rgba(255,255,255,.45); background:rgba(255,255,255,.12); color:#fff; cursor:pointer; transition:background .15s, transform .1s;}
+  .btn:hover{background:rgba(255,255,255,.22);}
+  .btn:active{transform:scale(.98);}
+  .btn.primary{background:#fff; color:#3B3FD9; border-color:#fff;}
+  .btn.primary:hover{background:#EEF0FF;}
 
-  .wrap{max-width:1240px; margin:0 auto; padding:22px 28px 60px;}
+  .wrap{max-width:1260px; margin:0 auto; padding:24px 32px 64px;}
 
   /* Carga */
-  .drop-screen{max-width:640px; margin:48px auto; text-align:center;}
-  .drop-title{font-family:'Kumbh Sans'; font-size:24px; font-weight:600; margin:0 0 10px; line-height:1.25;}
-  .drop-sub{color:var(--text-dim); font-size:14px; line-height:1.5; margin:0 0 24px;}
-  .dropzone{border:1.5px dashed var(--border); border-radius:14px; padding:36px 20px; cursor:pointer; background:var(--panel); transition:border-color .15s;}
-  .dropzone:hover,.dropzone.drag{border-color:var(--accent);}
-  .dropzone .dz1{font-weight:600; font-size:15px;}
-  .dropzone .dz2{color:var(--text-dim); font-size:12px; margin-top:4px;}
+  .drop-screen{max-width:640px; margin:40px auto; text-align:center;}
+  .drop-title{font-size:28px; font-weight:800; margin:0 0 10px; line-height:1.2; letter-spacing:-.5px;}
+  .drop-sub{color:var(--text-dim); font-size:15px; line-height:1.55; margin:0 0 26px;}
+  .dropzone{border:2px dashed var(--border); border-radius:22px; padding:40px 20px; cursor:pointer; background:var(--panel); box-shadow:var(--shadow); transition:border-color .15s, transform .15s;}
+  .dropzone:hover,.dropzone.drag{border-color:var(--accent); transform:translateY(-2px);}
+  .dz-icon{width:52px; height:52px; border-radius:16px; margin:0 auto 12px; display:grid; place-items:center; background:var(--accent-dim); color:var(--accent);}
+  .dropzone .dz1{font-weight:700; font-size:16px;}
+  .dropzone .dz2{color:var(--text-dim); font-size:13px; margin-top:4px;}
   .drop-error{margin-top:14px; color:var(--bad); font-size:13px;}
-  .rules{margin-top:24px; text-align:left; font-size:12.5px; color:var(--text-dim); line-height:1.6; background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius); padding:14px 16px;}
+  .rules{margin-top:22px; text-align:left; font-size:13px; color:var(--text-dim); line-height:1.65; background:var(--panel); border-radius:16px; padding:16px 18px; box-shadow:var(--shadow);}
 
   /* Filtros */
-  .filters{display:flex; gap:18px 24px; flex-wrap:wrap; align-items:flex-end; margin-bottom:18px;}
-  .fgroup label{display:block; font-size:11px; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;}
-  .seg{display:inline-flex; flex-wrap:wrap; gap:2px; padding:3px; background:var(--panel); border:1px solid var(--border); border-radius:10px;}
-  .seg button{font:inherit; font-size:12.5px; padding:6px 12px; border:0; border-radius:7px; background:transparent; color:var(--text-dim); cursor:pointer; white-space:nowrap;}
-  .seg button:hover{color:var(--text);}
-  .seg button.active{background:var(--accent); color:#fff; font-weight:600;}
-  input[type=search]{font:inherit; font-size:13px; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text); min-width:220px;}
+  .filters{display:flex; gap:16px 26px; flex-wrap:wrap; align-items:flex-end; margin-bottom:18px; background:var(--panel); border-radius:var(--radius); padding:16px 20px; box-shadow:var(--shadow);}
+  .fgroup label{display:block; font-size:12px; font-weight:700; color:var(--text-dim); margin-bottom:8px;}
+  .seg{display:inline-flex; flex-wrap:wrap; gap:6px;}
+  .seg button{font:inherit; font-size:13px; font-weight:500; padding:7px 14px; border:1px solid var(--border); border-radius:999px; background:var(--panel); color:var(--text-dim); cursor:pointer; white-space:nowrap; transition:all .15s;}
+  .seg button:hover{border-color:var(--accent); color:var(--accent);}
+  .seg button.active{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; box-shadow:0 3px 10px rgba(59,91,253,.28);}
+  input[type=search]{font:inherit; font-size:13px; padding:8px 14px 8px 34px; border-radius:999px; border:1px solid var(--border); background:var(--panel-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238E95A8' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 12px center; color:var(--text); min-width:240px; outline:none;}
+  input[type=search]:focus{border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim);}
 
   /* Banner */
-  .banner{background:var(--panel); border:1px solid var(--border); border-left:4px solid var(--accent); border-radius:var(--radius); padding:14px 18px; font-size:14.5px; line-height:1.55; margin-bottom:16px;}
-  .banner b{font-weight:600;}
+  .banner{display:flex; gap:14px; align-items:flex-start; background:linear-gradient(100deg, var(--accent-dim), var(--violet-bg)); border-radius:var(--radius); padding:16px 20px; font-size:15px; line-height:1.6; margin-bottom:18px;}
+  .banner::before{content:''; flex:none; width:34px; height:34px; border-radius:11px; background:var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%233B5BFD' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z'/%3E%3C/svg%3E") no-repeat center;}
+  .banner b{font-weight:700;}
 
   /* KPIs */
-  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:20px;}
-  .kpi{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px;}
-  .kpi .l{font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.4px; font-weight:600; display:flex; align-items:center; gap:6px;}
-  .kpi .v{font-family:'Kumbh Sans'; font-size:30px; font-weight:600; margin-top:6px; line-height:1.1;}
-  .kpi .s{font-size:12.5px; color:var(--text-dim); margin-top:4px;}
-  .dot{width:9px; height:9px; border-radius:3px; display:inline-block; flex:none;}
-  .meter{display:flex; gap:2px; height:8px; margin-top:10px; border-radius:4px; overflow:hidden;}
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin-bottom:22px;}
+  .kpi{background:var(--panel); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); position:relative; overflow:hidden;}
+  .kpi .l{font-size:13px; color:var(--text-dim); font-weight:600; display:flex; align-items:center; gap:10px;}
+  .kpi .ic{width:32px; height:32px; border-radius:10px; display:grid; place-items:center; flex:none;}
+  .kpi .v{font-size:34px; font-weight:800; margin-top:12px; line-height:1; letter-spacing:-1px; font-variant-numeric:tabular-nums;}
+  .kpi .s{font-size:13px; color:var(--text-dim); margin-top:6px; font-variant-numeric:tabular-nums;}
+  .dot{width:10px; height:10px; border-radius:50%; display:inline-block; flex:none;}
+  .meter{display:flex; gap:2px; height:8px; margin-top:12px; border-radius:999px; overflow:hidden;}
   .meter span{display:block; height:100%;}
 
   /* Tarjetas y tablas */
-  .card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:20px; overflow:hidden;}
-  .card-h{padding:14px 16px; border-bottom:1px solid var(--border-soft); display:flex; justify-content:space-between; align-items:center; gap:10px 16px; flex-wrap:wrap;}
-  .card-h h2{font-family:'Kumbh Sans'; font-size:16px; font-weight:600; margin:0; display:flex; align-items:center; gap:8px;}
+  .card{background:var(--panel); border-radius:var(--radius); margin-bottom:22px; overflow:hidden; box-shadow:var(--shadow);}
+  .card-h{padding:18px 20px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px 16px; flex-wrap:wrap;}
+  .card-h h2{font-size:17px; font-weight:700; margin:0; display:flex; align-items:center; gap:10px; letter-spacing:-.2px;}
   .card-h .sub{font-size:12.5px; color:var(--text-dim);}
-  .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--text-dim);}
-  .legend span{display:inline-flex; align-items:center; gap:6px;}
-  .tscroll{overflow-x:auto;}
+  .hic{width:30px; height:30px; border-radius:10px; display:grid; place-items:center; flex:none;}
+  .legend{display:flex; gap:8px; flex-wrap:wrap; font-size:12px; color:var(--text-dim);}
+  .legend span{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--panel-2);}
+  .tscroll{overflow-x:auto; padding:0 12px 12px;}
   .tscroll.tall{max-height:560px; overflow-y:auto;}
-  table{width:100%; border-collapse:collapse; font-size:13px;}
-  th{position:sticky; top:0; z-index:1; background:var(--panel-2); text-align:left; font-size:11px; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:.3px; padding:9px 12px; white-space:nowrap;}
+  table{width:100%; border-collapse:separate; border-spacing:0; font-size:13.5px; font-variant-numeric:tabular-nums;}
+  th{position:sticky; top:0; z-index:1; background:var(--panel-2); text-align:left; font-size:12px; font-weight:700; color:var(--text-dim); padding:10px 12px; white-space:nowrap;}
+  th:first-child{border-top-left-radius:12px; border-bottom-left-radius:12px;}
+  th:last-child{border-top-right-radius:12px; border-bottom-right-radius:12px;}
   th[data-key]{cursor:pointer; user-select:none;}
+  th[data-key]:hover{color:var(--accent);}
   th.num,td.num{text-align:right;}
   th .arrow{color:var(--accent);}
-  td{padding:8px 12px; border-top:1px solid var(--border-soft); vertical-align:top;}
-  td.wrapcell{min-width:170px; max-width:240px;}
-  td.cta{min-width:140px; max-width:200px;}
+  td{padding:11px 12px; border-bottom:1px solid var(--border-soft); vertical-align:top;}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:hover td{background:var(--panel-2);}
+  td.wrapcell{min-width:170px; max-width:240px; overflow-wrap:anywhere;}
+  td.cta{min-width:140px; max-width:200px; overflow-wrap:anywhere;}
   .muted{color:var(--text-faint);}
 
   /* Cuadro resumen */
   #pivot td{vertical-align:middle;}
-  #pivot tr.unit td{font-weight:600; background:var(--panel);}
+  #pivot tr.unit td{font-weight:700;}
   #pivot tr.unit{cursor:pointer;}
   #pivot tr.unit:hover td{background:var(--accent-dim);}
-  #pivot tr.unit td:first-child::before{content:'▸ '; color:var(--text-faint);}
-  #pivot tr.unit.open td:first-child::before{content:'▾ ';}
-  #pivot tr.etapa td{color:var(--text-dim);}
-  #pivot tr.etapa td:first-child{padding-left:34px;}
-  #pivot tr.total td{font-weight:700; background:var(--panel-2); border-top:2px solid var(--border);}
-  .stack{display:flex; gap:2px; height:10px; min-width:140px; border-radius:4px; overflow:hidden; background:transparent;}
+  #pivot tr.unit td:first-child::before{content:'›'; display:inline-block; width:16px; color:var(--accent); font-weight:800; transition:transform .15s;}
+  #pivot tr.unit.open td:first-child::before{transform:rotate(90deg);}
+  #pivot tr.etapa td{color:var(--text-dim); background:var(--panel-2);}
+  #pivot tr.etapa td:first-child{padding-left:40px;}
+  #pivot tr.total td, #dealSummary tr.total td{font-weight:800; background:var(--accent-dim); color:var(--text); border-bottom:0;}
+  #pivot tr.total td:first-child, #dealSummary tr.total td:first-child{border-top-left-radius:12px; border-bottom-left-radius:12px;}
+  #pivot tr.total td:last-child, #dealSummary tr.total td:last-child{border-top-right-radius:12px; border-bottom-right-radius:12px;}
+  .stack{display:flex; gap:2px; height:10px; min-width:150px; border-radius:999px; overflow:hidden;}
   .stack span{display:block; height:100%;}
-  .pct{font-weight:600;}
-  td.late{color:var(--bad);}
-  .subbar{display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border-soft); font-size:12px; color:var(--text-dim);}
-  .subbar label + select + label{margin-left:8px;}
-  .subbar label{font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.4px;}
-  .subbar select{font:inherit; font-size:13px; padding:6px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text);}
-  .mm{color:var(--text-dim); font-weight:400;}
+  .pct{font-weight:700; color:var(--accent-ink);}
+  .mm{color:var(--text-faint); font-weight:500;}
   td.cm{white-space:nowrap;}
-  .subh{padding:12px 16px 8px; font-size:11px; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:.4px; border-top:1px solid var(--border-soft);}
-  .card-h + .subh{border-top:0;}
-  #dealSummary tr.total td{font-weight:700; background:var(--panel-2); border-top:2px solid var(--border);}
-  #conc tr.sel td{background:var(--accent-dim); font-weight:600;}
+  td.late{color:var(--bad); font-weight:600;}
+  #conc tr.sel td{background:var(--accent-dim); font-weight:700;}
 
-  .tag{display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:var(--panel-2); color:var(--text-dim); white-space:nowrap;}
-  .tag.deal{background:var(--accent-dim); color:var(--accent);}
-  .count{font-family:'IBM Plex Mono',monospace; font-size:12px; padding:2px 8px; border-radius:999px; background:var(--panel-2); color:var(--text-dim);}
-  .foot{font-size:12px; color:var(--text-faint); line-height:1.6;}
-  .tip{position:fixed; z-index:50; pointer-events:none; background:var(--text); color:var(--bg); font-size:12px; padding:6px 9px; border-radius:6px; white-space:nowrap;}
+  .subh{padding:6px 24px 10px; font-size:12px; font-weight:700; color:var(--text-dim);}
+  .subh::before{content:''; display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-right:8px; vertical-align:middle;}
+  .subbar{display:flex; align-items:center; flex-wrap:wrap; gap:8px 10px; margin:0 20px 12px; padding:10px 14px; border-radius:14px; background:var(--panel-2); font-size:12px; color:var(--text-dim);}
+  .subbar label{font-size:12px; font-weight:700;}
+  .subbar label + select + label{margin-left:10px;}
+  .subbar select{font:inherit; font-size:13px; padding:7px 30px 7px 14px; border-radius:999px; border:1px solid var(--border); background:var(--panel); color:var(--text); cursor:pointer;}
+
+  .tag{display:inline-block; font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; background:var(--panel-3); color:var(--text-dim); white-space:nowrap;}
+  .tag.deal{background:var(--deal-bg); color:var(--deal);}
+  .tag.corp{background:var(--corp-bg); color:var(--corp);}
+  .tag.et-prospeccion{background:var(--accent-dim); color:var(--accent-ink);}
+  .tag.et-solucion{background:var(--violet-bg); color:var(--violet);}
+  .tag.et-negociacion, .tag.et-cierre{background:var(--nodeal-bg); color:var(--nodeal);}
+  .tag.et-cerrada-ganada{background:var(--good-bg); color:var(--good);}
+  .tag.et-cerrada-perdida{background:var(--bad-bg); color:var(--bad);}
+  .count{font-size:13px; font-weight:700; padding:2px 10px; border-radius:999px; background:var(--panel-3); color:var(--text-dim);}
+  .foot{font-size:12px; color:var(--text-faint); line-height:1.7; padding:4px 6px;}
+  .tip{position:fixed; z-index:50; pointer-events:none; background:var(--text); color:var(--bg); font-size:12px; font-weight:600; padding:7px 11px; border-radius:10px; white-space:nowrap; box-shadow:var(--shadow);}
 
   @media (max-width:640px){
     .topbar{padding:12px 16px;} .wrap{padding:16px 16px 40px;}
+    .filters{padding:14px 16px;}
     input[type=search]{min-width:0; width:100%;} .fgroup{width:100%;}
-    .seg{display:flex;}
-    .kpi .v{font-size:26px;}
+    .kpi .v{font-size:28px;}
+    .tscroll{padding:0 6px 8px;}
   }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div>
-    <div class="t1">Seguimiento de Deal · Pipe con productos FCST</div>
+  <div class="brand">
+    <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></div>
+    <div>
+    <div class="t1">Seguimiento de Deal</div>
     <div class="t2" id="topSub">Pipe con productos FCST · corte semanal</div>
+    </div>
   </div>
   <div id="topActions" class="hidden" style="display:flex; gap:8px;">
     <button class="btn" id="btnExport">Descargar Excel</button>
@@ -163,6 +198,7 @@
     <h1 class="drop-title">Sube el Excel de "Pipe con productos FCST"</h1>
     <p class="drop-sub">Muestra cuántas oportunidades de USD 500,000 o más ya tienen deal y cuántas no, por Unidad Comercial y Etapa. Todo se calcula en tu navegador; el archivo no sale de tu computadora.</p>
     <div class="dropzone" id="dropzone">
+      <div class="dz-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
       <div class="dz1">Arrastra tu archivo aquí</div>
       <div class="dz2">o haz clic para buscarlo · .xlsx</div>
       <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
@@ -200,7 +236,7 @@
 
     <div class="card">
       <div class="card-h">
-        <h2 id="pivotTitle">Cuadro resumen</h2>
+        <h2><span class="hic" style="background:var(--accent-dim);color:var(--accent)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span><span id="pivotTitle">Cuadro resumen</span></h2>
         <div class="legend">
           <span><i class="dot" style="background:var(--deal)"></i>SI</span>
           <span><i class="dot" style="background:var(--corp)"></i>SI - Corporativo</span>
@@ -212,7 +248,7 @@
 
     <div class="card">
       <div class="card-h">
-        <h2>¿Cómo se llega al resumen?</h2>
+        <h2><span class="hic" style="background:var(--violet-bg);color:var(--violet)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M6 12h12M10 19h4"/></svg></span>¿Cómo se llega al resumen?</h2>
         <span class="sub" id="concSub"></span>
       </div>
       <div class="tscroll"><table id="conc"></table></div>
@@ -220,10 +256,10 @@
 
     <div class="card">
       <div class="card-h">
-        <h2><i class="dot" style="background:var(--deal)"></i>Con deal <span class="count" id="dealCount"></span></h2>
+        <h2><span class="hic" style="background:var(--deal-bg);color:var(--deal)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Con deal <span class="count" id="dealCount"></span></h2>
         <span class="sub" id="dealSub"></span>
       </div>
-      <div class="subh">Resumen por Vertical y Etapa · # oportunidades / monto (convertido) en millones de USD</div>
+      <div class="subh">Resumen por Vertical y Etapa · # oportunidades / monto en millones de USD</div>
       <div class="tscroll"><table id="dealSummary"></table></div>
       <div class="subh" id="dealDetailH">Detalle</div>
       <div class="tscroll tall"><table id="dealTable"></table></div>
@@ -231,7 +267,7 @@
 
     <div class="card">
       <div class="card-h">
-        <h2><i class="dot" style="background:var(--nodeal)"></i>Sin deal <span class="count" id="noDealCount"></span></h2>
+        <h2><span class="hic" style="background:var(--nodeal-bg);color:var(--nodeal)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>Sin deal <span class="count" id="noDealCount"></span></h2>
         <span class="sub" id="noDealSub"></span>
       </div>
       <div class="subbar">
@@ -288,6 +324,7 @@ const fmtN = v => v.toLocaleString('es-MX');
 const fmtPct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
 const fmtDate = d => d ? d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric', timeZone:'UTC'}) : '—';
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const slug = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 const etapaRank = e => { const i = ETAPA_ORDEN.indexOf(e); return i < 0 ? 99 : i; };
 
 function parseDate(v){
@@ -418,7 +455,7 @@ function renderBanner(list){
   const scope = S.scope === 'abiertas' ? 'abiertas ' : '';
   const where = S.unit === 'ALL' ? '' : ` en <b>${esc(S.unit)}</b>`;
   const when = S.year === 'ALL' ? '' : ` creadas en ${S.year}`;
-  if (!a.n){ document.getElementById('banner').innerHTML = `No hay oportunidades ${scope}${where}${when} con este filtro.`; return; }
+  if (!a.n){ document.getElementById('banner').innerHTML = `<div>No hay oportunidades ${scope}${where}${when} con este filtro.</div>`; return; }
   let txt = `De <b>${fmtN(a.n)} oportunidades ${scope.trim()}</b>${where}${when} (${fmtUSD(a.monto)}), ` +
     `<b>${fmtN(a.deal)} (${fmtPct(a.deal, a.n)}) ya tienen deal</b> por ${fmtUSD(a.montoDeal)} (cualquier monto) y ` +
     `<b>${fmtN(sinN)} de USD 500K o más siguen sin deal</b> por ${fmtUSD(sinM)}.`;
@@ -427,17 +464,17 @@ function renderBanner(list){
     const top = byU.slice().sort((x, y) => (y.a.monto - y.a.montoDeal) - (x.a.monto - x.a.montoDeal))[0];
     if (top && top.a.n - top.a.deal > 0) txt += ` El mayor monto sin deal está en <b>${esc(top.u)}</b>: ${fmtN(top.a.n - top.a.deal)} oportunidades por ${fmtUSD(top.a.monto - top.a.montoDeal)}.`;
   }
-  document.getElementById('banner').innerHTML = txt;
+  document.getElementById('banner').innerHTML = `<div>${txt}</div>`;
 }
 
 function renderKpis(list){
   const a = agg(list, []);
   const sinN = a.n - a.deal;
   document.getElementById('kpis').innerHTML = `
-    <div class="kpi"><div class="l">Oportunidades</div><div class="v">${fmtN(a.n)}</div><div class="s">${fmtUSD(a.monto)}</div></div>
-    <div class="kpi"><div class="l"><i class="dot" style="background:var(--deal)"></i>Con deal · cualquier monto</div><div class="v">${fmtN(a.deal)}</div><div class="s">${fmtUSD(a.montoDeal)}</div></div>
-    <div class="kpi"><div class="l"><i class="dot" style="background:var(--nodeal)"></i>Sin deal · ≥ 500K</div><div class="v">${fmtN(sinN)}</div><div class="s">${fmtUSD(a.monto - a.montoDeal)}</div></div>
-    <div class="kpi"><div class="l">% con deal</div><div class="v">${fmtPct(a.deal, a.n)}</div>
+    <div class="kpi"><div class="l"><span class="ic" style="background:var(--accent-dim);color:var(--accent)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></span>Oportunidades</div><div class="v">${fmtN(a.n)}</div><div class="s">${fmtUSD(a.monto)}</div></div>
+    <div class="kpi"><div class="l"><span class="ic" style="background:var(--deal-bg);color:var(--deal)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>Con deal · cualquier monto</div><div class="v">${fmtN(a.deal)}</div><div class="s">${fmtUSD(a.montoDeal)}</div></div>
+    <div class="kpi"><div class="l"><span class="ic" style="background:var(--nodeal-bg);color:var(--nodeal)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>Sin deal · ≥ 500K</div><div class="v">${fmtN(sinN)}</div><div class="s">${fmtUSD(a.monto - a.montoDeal)}</div></div>
+    <div class="kpi"><div class="l"><span class="ic" style="background:var(--good-bg);color:var(--good)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>% con deal</div><div class="v">${fmtPct(a.deal, a.n)}</div>
       <div class="s">${fmtPct(a.montoDeal, a.monto)} del monto</div>
       <div class="meter">${a.n ? `<span style="flex:${a.deal} 1 0;background:var(--deal)"></span><span style="flex:${sinN} 1 0;background:var(--nodeal)"></span>` : ''}</div></div>`;
 }
@@ -505,8 +542,8 @@ function detailTable(id, list, st, withDeal){
       <td class="mono">${esc(o.id)}</td>
       ${showUnit ? `<td style="white-space:nowrap">${esc(o.unidad)}${withDeal && o.vertical !== o.unidad ? `<div class="muted" style="font-size:11.5px">Vertical: ${esc(o.vertical)}</div>` : ''}</td>` : ''}
       <td class="cta">${esc(o.cuenta)}</td><td class="wrapcell">${esc(o.tema)}</td>
-      <td><span class="tag">${esc(o.etapa)}</span></td>
-      ${withDeal ? `${showUnit ? '' : `<td style="white-space:nowrap">${esc(o.vertical)}</td>`}<td><span class="tag deal">${esc(o.deal)}</span></td>` : ''}
+      <td><span class="tag et-${slug(o.etapa)}">${esc(o.etapa)}</span></td>
+      ${withDeal ? `${showUnit ? '' : `<td style="white-space:nowrap">${esc(o.vertical)}</td>`}<td><span class="tag ${/corporativo/i.test(o.deal) ? 'corp' : 'deal'}">${esc(o.deal)}</span></td>` : ''}
       <td class="num mono">${fmtMM(o.monto, 2)}</td></tr>`).join('')
     : `<tr><td colspan="${ncol}" class="muted" style="text-align:center;padding:24px">Ninguna oportunidad con este filtro</td></tr>`) + `</tbody>`;
 }
@@ -524,7 +561,7 @@ function renderConciliacion(){
   document.getElementById('conc').innerHTML =
     `<thead><tr><th>Paso</th><th class="num">Oportunidades</th><th class="num">Con deal (SI)</th><th class="num">Sin deal</th></tr></thead><tbody>` +
     pasos.map(([label, l], i) => { const a = agg(l, []);
-      return `<tr${i === sel ? ' class="sel"' : ''}><td>${label}${i === sel ? ' <span class="tag deal">lo que muestra el resumen</span>' : ''}</td>` +
+      return `<tr${i === sel ? ' class="sel"' : ''}><td>${label}${i === sel ? ' <span class="tag deal" style="margin-left:6px">lo que muestra el resumen</span>' : ''}</td>` +
         `<td class="num mono cm">${cm(a.n, a.monto)}</td><td class="num mono cm"><b>${cm(a.deal, a.montoDeal)}</b></td><td class="num mono cm">${cm(a.n - a.deal, a.monto - a.montoDeal)}</td></tr>`; }).join('') +
     `</tbody>`;
 }
