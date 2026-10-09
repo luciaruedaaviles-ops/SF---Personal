@@ -79,3 +79,25 @@ plano de Salesforce no trae. Se tomaron estas decisiones, confirmadas con el usu
 Un único archivo HTML (`index.html`) con CSS y JS inline. Librerías externas cargadas por CDN:
 [SheetJS](https://sheetjs.com/) (lectura de Excel) y [Chart.js](https://www.chartjs.org/)
 (gráficos). Sin dependencias de build ni Node — es una página estática.
+
+## Reporte: Oportunidades ≥ USD 500K (`oportunidades-500k.html`)
+
+Página aparte, del mismo tipo (estática, sin servidor), que lee el mismo Excel semanal de
+"Pipe con productos FCST" y muestra:
+
+- **Oportunidades por Unidad Comercial**: cuántas oportunidades ≥ 500K hay por
+  `Unidad de Comercial` (col. M), desglosadas por año de `Fecha de creación` (col. L), con monto
+  total y % del total.
+- **Detalle por fecha de creación**: la lista de esas oportunidades, de la más reciente a la más
+  antigua (se puede reordenar por cualquier columna).
+
+Reglas:
+- Una sola fila por `ID Oportunidad` (col. B). `Monto (convertido)` (col. BF) se repite igual
+  en cada línea de producto de la oportunidad, así que se toma una vez y no se suma.
+- Se quedan solo las oportunidades con `Monto (convertido)` ≥ 500,000.
+- **No** se aplica el filtro de Tipo de registro del tablero principal: entran también las
+  variantes "Secundaria".
+- Filtros: año de creación, Unidad Comercial y búsqueda por ID, cuenta o tema. "Descargar Excel"
+  exporta las dos tablas con el filtro activo.
+- Las columnas se ubican por el nombre del encabezado; si el nombre cambia, se usa la letra
+  (B, L, M, BF). Al pie del reporte se muestran las columnas que se leyeron.

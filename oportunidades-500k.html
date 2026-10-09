@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oportunidades ≥ 500K</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@500;600;700&family=Roboto:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#FFFFFF; --panel:#FFFFFF; --panel-2:#F2F4F8;
+    --border:#E1E5EC; --border-soft:#EDF0F5;
+    --text:#12151B; --text-dim:#5B6472; --text-faint:#9AA2B1;
+    --accent:#1F5DF5; --accent-dim:#DCE6FE;
+    --good:#1D9A63; --bad:#E14C3D;
+    --radius:10px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0F1218; --panel:#161A22; --panel-2:#1E2330;
+      --border:#2A3140; --border-soft:#222836;
+      --text:#E8EBF1; --text-dim:#A3ACBB; --text-faint:#6B7486;
+      --accent:#6B93FF; --accent-dim:#22305A;
+      --good:#3CC489; --bad:#FF7A6B;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0F1218; --panel:#161A22; --panel-2:#1E2330;
+    --border:#2A3140; --border-soft:#222836;
+    --text:#E8EBF1; --text-dim:#A3ACBB; --text-faint:#6B7486;
+    --accent:#6B93FF; --accent-dim:#22305A;
+    --good:#3CC489; --bad:#FF7A6B;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Roboto',Arial,system-ui,sans-serif; -webkit-font-smoothing:antialiased; min-height:100vh;}
+  .mono{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums;}
+  .hidden{display:none !important;}
+
+  .topbar{position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    padding:14px 28px; background:var(--panel); border-bottom:1px solid var(--border-soft);}
+  .topbar .t1{font-family:'Kumbh Sans'; font-weight:600; font-size:15px;}
+  .topbar .t2{font-size:11px; color:var(--text-dim); margin-top:2px;}
+  .btn{font:inherit; font-size:12px; font-weight:500; padding:7px 12px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text); cursor:pointer;}
+  .btn:hover{border-color:var(--accent); color:var(--accent);}
+  .btn.primary{background:var(--accent); border-color:var(--accent); color:#fff;}
+  .btn.primary:hover{opacity:.9; color:#fff;}
+
+  .wrap{max-width:1240px; margin:0 auto; padding:24px 28px 60px;}
+
+  /* Upload */
+  .drop-screen{max-width:640px; margin:48px auto; text-align:center;}
+  .drop-title{font-family:'Kumbh Sans'; font-size:24px; font-weight:600; margin:0 0 10px; line-height:1.25;}
+  .drop-sub{color:var(--text-dim); font-size:14px; line-height:1.5; margin:0 0 24px;}
+  .dropzone{border:1.5px dashed var(--border); border-radius:14px; padding:36px 20px; cursor:pointer; background:var(--panel-2); transition:border-color .15s;}
+  .dropzone:hover,.dropzone.drag{border-color:var(--accent);}
+  .dropzone .dz1{font-weight:600; font-size:15px;}
+  .dropzone .dz2{color:var(--text-dim); font-size:12px; margin-top:4px;}
+  .drop-error{margin-top:14px; color:var(--bad); font-size:13px;}
+  .rules{margin-top:24px; text-align:left; font-size:12.5px; color:var(--text-dim); line-height:1.6; background:var(--panel-2); border-radius:var(--radius); padding:14px 16px;}
+
+  /* Filtros */
+  .filters{display:flex; gap:18px; flex-wrap:wrap; align-items:flex-end; margin-bottom:20px;}
+  .fgroup label{display:block; font-size:11px; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:.4px; margin-bottom:6px;}
+  .pills{display:flex; gap:6px; flex-wrap:wrap;}
+  .pill{font:inherit; font-size:12px; padding:6px 11px; border-radius:999px; border:1px solid var(--border); background:var(--panel); color:var(--text-dim); cursor:pointer;}
+  .pill.active{background:var(--accent-dim); border-color:var(--accent); color:var(--accent); font-weight:600;}
+  select,input[type=search]{font:inherit; font-size:13px; padding:7px 10px; border-radius:8px; border:1px solid var(--border); background:var(--panel); color:var(--text);}
+  input[type=search]{min-width:220px;}
+
+  /* KPIs */
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:24px;}
+  .kpi{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px;}
+  .kpi .l{font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.4px; font-weight:600;}
+  .kpi .v{font-family:'Kumbh Sans'; font-size:26px; font-weight:600; margin-top:6px;}
+  .kpi .s{font-size:12px; color:var(--text-faint); margin-top:2px;}
+
+  /* Tablas */
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:24px; overflow:hidden;}
+  .card-h{padding:14px 16px; border-bottom:1px solid var(--border-soft); display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .card-h h2{font-family:'Kumbh Sans'; font-size:16px; font-weight:600; margin:0;}
+  .card-h .sub{font-size:12px; color:var(--text-dim);}
+  .tscroll{overflow-x:auto;}
+  .tscroll.tall{max-height:640px; overflow-y:auto;}
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{position:sticky; top:0; background:var(--panel-2); text-align:left; font-size:11px; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:.3px; padding:9px 12px; white-space:nowrap; cursor:pointer; user-select:none;}
+  th.num,td.num{text-align:right;}
+  th .arrow{color:var(--accent);}
+  td{padding:8px 12px; border-top:1px solid var(--border-soft); vertical-align:top;}
+  td.wrapcell{min-width:200px; max-width:300px;}
+  tr.total td{font-weight:600; background:var(--panel-2);}
+  .tag{display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px; background:var(--panel-2); color:var(--text-dim); white-space:nowrap;}
+  .tag.won{color:var(--good);} .tag.lost{color:var(--bad);}
+  .bar{height:6px; border-radius:3px; background:var(--accent); min-width:2px;}
+  .barcell{width:22%; min-width:100px;}
+  .foot{font-size:12px; color:var(--text-faint); line-height:1.6;}
+
+  @media (max-width:640px){
+    .topbar{padding:12px 16px;} .wrap{padding:16px 16px 40px;}
+    input[type=search]{min-width:0; width:100%;} .fgroup{width:100%;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="t1">Oportunidades ≥ USD 500K</div>
+    <div class="t2" id="topSub">Pipe con productos FCST · corte semanal</div>
+  </div>
+  <div id="topActions" class="hidden" style="display:flex; gap:8px;">
+    <button class="btn" id="btnExport">Descargar Excel</button>
+    <button class="btn primary" id="btnReload">Cargar nueva semana</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="drop-screen" id="dropScreen">
+    <h1 class="drop-title">Sube el Excel de "Pipe con productos FCST"</h1>
+    <p class="drop-sub">Saca las oportunidades de USD 500,000 o más, ordenadas por fecha de creación, y las cuenta por Unidad Comercial. Todo se calcula en tu navegador; el archivo no sale de tu computadora.</p>
+    <div class="dropzone" id="dropzone">
+      <div class="dz1">Arrastra tu archivo aquí</div>
+      <div class="dz2">o haz clic para buscarlo · .xlsx</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none">
+    </div>
+    <div class="drop-error hidden" id="dropError"></div>
+    <div class="rules">
+      <b>Columnas que usa:</b> ID Oportunidad (B) · Fecha de creación (L) · Unidad de Comercial (M) · Monto (convertido) (BF).<br>
+      <b>Reglas:</b> una sola fila por ID Oportunidad (el monto se repite en cada línea de producto, así que no se suma) · se quedan solo las de Monto (convertido) ≥ 500,000.
+    </div>
+  </div>
+
+  <div id="report" class="hidden">
+    <div class="filters">
+      <div class="fgroup">
+        <label>Año de creación</label>
+        <div class="pills" id="yearPills"></div>
+      </div>
+      <div class="fgroup">
+        <label>Unidad Comercial</label>
+        <select id="unitSel"></select>
+      </div>
+      <div class="fgroup">
+        <label>Buscar</label>
+        <input type="search" id="search" placeholder="ID, cuenta o tema">
+      </div>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="card">
+      <div class="card-h">
+        <h2>Oportunidades por Unidad Comercial</h2>
+        <span class="sub" id="unitSub"></span>
+      </div>
+      <div class="tscroll"><table id="unitTable"></table></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <h2>Detalle por fecha de creación</h2>
+        <span class="sub" id="detailSub"></span>
+      </div>
+      <div class="tscroll tall"><table id="detailTable"></table></div>
+    </div>
+
+    <div class="foot" id="foot"></div>
+  </div>
+</div>
+
+<script>
+const UMBRAL = 500000;
+// Se buscan por nombre de encabezado; si Salesforce cambia el nombre, se usa la letra de columna.
+const COLS = {
+  id:      {name:'ID Oportunidad',      letter:'B'},
+  fecha:   {name:'Fecha de creación',   letter:'L'},
+  unidad:  {name:'Unidad de Comercial', letter:'M'},
+  monto:   {name:'Monto (convertido)',  letter:'BF'},
+  etapa:   {name:'Etapa',               letter:null},
+  cuenta:  {name:'Cuenta',              letter:null},
+  tema:    {name:'Tema',                letter:null},
+  owner:   {name:'Propietario',         letter:null}
+};
+
+const S = { opps:[], meta:{}, year:'ALL', unit:'ALL', q:'', sortDetail:{key:'fecha', dir:-1}, sortUnit:{key:'n', dir:-1} };
+
+const fmtUSD = v => '$' + Math.round(v).toLocaleString('es-MX');
+const fmtM = v => '$' + (v/1e6).toLocaleString('es-MX', {minimumFractionDigits:1, maximumFractionDigits:1}) + 'M';
+const fmtDate = d => d ? d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric', timeZone:'UTC'}) : '—';
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function parseDate(v){
+  if (v == null || v === '') return null;
+  if (v instanceof Date && !isNaN(v)) return new Date(Date.UTC(v.getFullYear(), v.getMonth(), v.getDate()));
+  const m = String(v).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m ? new Date(Date.UTC(+m[3], +m[2]-1, +m[1])) : null;
+}
+function parseNum(v){
+  if (typeof v === 'number') return v;
+  if (v == null) return NaN;
+  const n = Number(String(v).replace(/[^0-9.\-]/g, ''));
+  return String(v).trim() === '' ? NaN : n;
+}
+
+function parseWorkbook(wb){
+  const sheetName = wb.SheetNames.find(n => /pipe/i.test(n)) || wb.SheetNames[0];
+  const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, raw:true, defval:null});
+
+  let hdrRow = -1;
+  for (let r = 0; r < Math.min(aoa.length, 50); r++){
+    if ((aoa[r]||[]).some(c => c != null && String(c).trim() === COLS.id.name)){ hdrRow = r; break; }
+  }
+  if (hdrRow < 0) throw new Error('No encontré el encabezado "ID Oportunidad" en la hoja "' + sheetName + '".');
+
+  const header = aoa[hdrRow].map(h => h == null ? '' : String(h).trim());
+  const idx = {};
+  for (const [k, c] of Object.entries(COLS)){
+    let i = header.indexOf(c.name);
+    if (i < 0 && c.letter) i = XLSX.utils.decode_col(c.letter);
+    idx[k] = i;
+  }
+  for (const k of ['id','fecha','unidad','monto']){
+    if (idx[k] < 0) throw new Error('No encontré la columna "' + COLS[k].name + '".');
+  }
+
+  // Fecha de corte y autor desde el encabezado del reporte ("A partir de ... • Generado por ...")
+  const meta = {sheetName};
+  for (let r = 0; r < hdrRow; r++){
+    const cell = (aoa[r]||[]).find(v => typeof v === 'string' && v.includes('A partir de'));
+    if (cell){
+      const m = cell.match(/A partir de (\d{4})-(\d{2})-(\d{2})/);
+      if (m) meta.corte = new Date(Date.UTC(+m[1], +m[2]-1, +m[3]));
+      const g = cell.match(/Generado por ([^•]+)/);
+      if (g) meta.autor = g[1].trim();
+    }
+  }
+
+  const byId = new Map();
+  let lineas = 0;
+  for (let r = hdrRow + 1; r < aoa.length; r++){
+    const row = aoa[r]; if (!row) continue;
+    const id = row[idx.id];
+    if (id == null || String(id).trim() === '') continue;
+    lineas++;
+    const key = String(id).trim();
+    if (byId.has(key)) continue; // una fila por ID: el monto es de la oportunidad, no de la línea
+    const get = k => idx[k] >= 0 ? row[idx[k]] : null;
+    byId.set(key, {
+      id: key,
+      fecha: parseDate(get('fecha')),
+      unidad: String(get('unidad') ?? '').trim() || '(Sin unidad)',
+      monto: parseNum(get('monto')),
+      etapa: String(get('etapa') ?? '').trim(),
+      cuenta: String(get('cuenta') ?? '').trim(),
+      tema: String(get('tema') ?? '').trim(),
+      owner: String(get('owner') ?? '').trim()
+    });
+  }
+  const all = [...byId.values()];
+  const opps = all.filter(o => isFinite(o.monto) && o.monto >= UMBRAL);
+  meta.lineas = lineas; meta.idsUnicos = all.length;
+  meta.headers = {id:header[idx.id], fecha:header[idx.fecha], unidad:header[idx.unidad], monto:header[idx.monto]};
+  meta.letters = {id:XLSX.utils.encode_col(idx.id), fecha:XLSX.utils.encode_col(idx.fecha), unidad:XLSX.utils.encode_col(idx.unidad), monto:XLSX.utils.encode_col(idx.monto)};
+  return {opps, meta};
+}
+
+function filtered(){
+  const q = S.q.toLowerCase();
+  return S.opps.filter(o =>
+    (S.year === 'ALL' || (o.fecha && o.fecha.getUTCFullYear() === S.year)) &&
+    (S.unit === 'ALL' || o.unidad === S.unit) &&
+    (!q || o.id.toLowerCase().includes(q) || o.cuenta.toLowerCase().includes(q) || o.tema.toLowerCase().includes(q)));
+}
+function years(){ return [...new Set(S.opps.map(o => o.fecha && o.fecha.getUTCFullYear()).filter(Boolean))].sort(); }
+
+function unitRows(list){
+  const m = new Map();
+  for (const o of list){
+    if (!m.has(o.unidad)) m.set(o.unidad, {unidad:o.unidad, n:0, monto:0, porAño:{}});
+    const u = m.get(o.unidad);
+    u.n++; u.monto += o.monto;
+    const y = o.fecha ? o.fecha.getUTCFullYear() : 'Sin fecha';
+    u.porAño[y] = (u.porAño[y] || 0) + 1;
+  }
+  return [...m.values()];
+}
+
+function sortBy(arr, {key, dir}){
+  return arr.slice().sort((a, b) => {
+    let x = a[key], y = b[key];
+    if (x instanceof Date || y instanceof Date){ x = x ? +x : -Infinity; y = y ? +y : -Infinity; }
+    if (typeof x === 'string') return dir * x.localeCompare(y, 'es');
+    return dir * ((x ?? 0) - (y ?? 0));
+  });
+}
+function th(label, key, state, cls=''){
+  const arrow = state.key === key ? `<span class="arrow">${state.dir < 0 ? ' ↓' : ' ↑'}</span>` : '';
+  return `<th class="${cls}" data-key="${key}">${label}${arrow}</th>`;
+}
+function etapaTag(e){
+  const cls = e === 'Cerrada Ganada' ? 'won' : e === 'Cerrada Perdida' ? 'lost' : '';
+  return e ? `<span class="tag ${cls}">${esc(e)}</span>` : '';
+}
+
+function render(){
+  const list = filtered();
+  const total = list.reduce((s, o) => s + o.monto, 0);
+  const units = unitRows(list);
+  const ys = years();
+
+  document.getElementById('kpis').innerHTML = [
+    {l:'Oportunidades ≥ 500K', v:list.length.toLocaleString('es-MX'), s:'IDs únicos con el filtro actual'},
+    {l:'Monto total', v:fmtM(total), s:'Monto (convertido), USD'},
+    {l:'Monto promedio', v:list.length ? fmtM(total / list.length) : '—', s:'por oportunidad'},
+    {l:'Unidades comerciales', v:units.length, s:'con al menos una oportunidad'}
+  ].map(k => `<div class="kpi"><div class="l">${k.l}</div><div class="v">${k.v}</div><div class="s">${k.s}</div></div>`).join('');
+
+  // Tabla por Unidad Comercial
+  const showYears = S.year === 'ALL' ? ys : [S.year];
+  const maxN = Math.max(1, ...units.map(u => u.n));
+  const uSorted = sortBy(units, S.sortUnit);
+  document.getElementById('unitSub').textContent = S.year === 'ALL' ? 'Conteo por año de creación' : `Creadas en ${S.year}`;
+  document.getElementById('unitTable').innerHTML =
+    `<thead><tr>${th('Unidad Comercial','unidad',S.sortUnit)}${th('# Oportunidades','n',S.sortUnit,'num')}<th></th>` +
+    showYears.map(y => `<th class="num">${y}</th>`).join('') +
+    `${th('Monto total','monto',S.sortUnit,'num')}<th class="num">% del total</th></tr></thead><tbody>` +
+    uSorted.map(u => `<tr><td>${esc(u.unidad)}</td><td class="num mono">${u.n}</td>
+      <td class="barcell"><div class="bar" style="width:${(u.n / maxN * 100).toFixed(1)}%"></div></td>` +
+      showYears.map(y => `<td class="num mono">${u.porAño[y] || '—'}</td>`).join('') +
+      `<td class="num mono">${fmtUSD(u.monto)}</td><td class="num mono">${total ? (u.monto / total * 100).toFixed(1) + '%' : '—'}</td></tr>`).join('') +
+    `<tr class="total"><td>Total</td><td class="num mono">${list.length}</td><td></td>` +
+      showYears.map(y => `<td class="num mono">${list.filter(o => o.fecha && o.fecha.getUTCFullYear() === y).length || '—'}</td>`).join('') +
+      `<td class="num mono">${fmtUSD(total)}</td><td class="num mono">${total ? '100%' : '—'}</td></tr></tbody>`;
+
+  // Detalle
+  const dSorted = sortBy(list, S.sortDetail);
+  document.getElementById('detailSub').textContent = `${list.length} oportunidades`;
+  document.getElementById('detailTable').innerHTML =
+    `<thead><tr>${th('Fecha de creación','fecha',S.sortDetail)}${th('ID Oportunidad','id',S.sortDetail)}${th('Unidad Comercial','unidad',S.sortDetail)}` +
+    `${th('Cuenta','cuenta',S.sortDetail)}${th('Tema','tema',S.sortDetail)}${th('Etapa','etapa',S.sortDetail)}${th('Monto (convertido)','monto',S.sortDetail,'num')}</tr></thead><tbody>` +
+    (dSorted.length ? dSorted.map(o => `<tr><td class="mono" style="white-space:nowrap">${fmtDate(o.fecha)}</td><td class="mono">${esc(o.id)}</td>
+      <td style="white-space:nowrap">${esc(o.unidad)}</td><td>${esc(o.cuenta)}</td><td class="wrapcell">${esc(o.tema)}</td>
+      <td>${etapaTag(o.etapa)}</td><td class="num mono">${fmtUSD(o.monto)}</td></tr>`).join('')
+      : `<tr><td colspan="7" style="text-align:center;color:var(--text-faint);padding:24px">Sin oportunidades con este filtro</td></tr>`) +
+    `</tbody>`;
+}
+
+function renderFilters(){
+  const ys = years();
+  const yp = document.getElementById('yearPills');
+  yp.innerHTML = ['ALL', ...ys].map(y => `<button class="pill ${S.year === y ? 'active' : ''}" data-y="${y}">${y === 'ALL' ? 'Todos' : y}</button>`).join('');
+  yp.querySelectorAll('.pill').forEach(b => b.onclick = () => {
+    S.year = b.dataset.y === 'ALL' ? 'ALL' : Number(b.dataset.y);
+    renderFilters(); render();
+  });
+  const units = [...new Set(S.opps.map(o => o.unidad))].sort((a, b) => a.localeCompare(b, 'es'));
+  const sel = document.getElementById('unitSel');
+  sel.innerHTML = `<option value="ALL">Todas</option>` + units.map(u => `<option ${S.unit === u ? 'selected' : ''}>${esc(u)}</option>`).join('');
+}
+
+function wireSort(tableId, stateKey){
+  document.getElementById(tableId).addEventListener('click', e => {
+    const h = e.target.closest('th[data-key]'); if (!h) return;
+    const st = S[stateKey];
+    if (st.key === h.dataset.key) st.dir *= -1; else { st.key = h.dataset.key; st.dir = ['n','monto','fecha'].includes(h.dataset.key) ? -1 : 1; }
+    render();
+  });
+}
+
+function exportExcel(){
+  const list = sortBy(filtered(), S.sortDetail);
+  const detalle = list.map(o => ({
+    'Fecha de creación': o.fecha ? new Date(o.fecha.getUTCFullYear(), o.fecha.getUTCMonth(), o.fecha.getUTCDate()) : '',
+    'ID Oportunidad': o.id, 'Unidad Comercial': o.unidad, 'Cuenta': o.cuenta, 'Tema': o.tema,
+    'Etapa': o.etapa, 'Propietario': o.owner, 'Monto (convertido)': o.monto
+  }));
+  const ys = S.year === 'ALL' ? years() : [S.year];
+  const resumen = sortBy(unitRows(list), S.sortUnit).map(u => {
+    const r = {'Unidad Comercial': u.unidad, '# Oportunidades': u.n};
+    ys.forEach(y => r[String(y)] = u.porAño[y] || 0);
+    r['Monto total'] = u.monto;
+    return r;
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), 'Por Unidad Comercial');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalle, {cellDates:true}), 'Detalle');
+  const c = S.meta.corte;
+  const tag = c ? c.toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `Oportunidades_500K_${tag}.xlsx`);
+}
+
+function load(wb){
+  const {opps, meta} = parseWorkbook(wb);
+  S.opps = opps; S.meta = meta; S.year = 'ALL'; S.unit = 'ALL'; S.q = '';
+  document.getElementById('search').value = '';
+  document.getElementById('topSub').textContent =
+    `Corte: ${meta.corte ? fmtDate(meta.corte) : 'fecha no detectada'}${meta.autor ? ' · Generado por ' + meta.autor : ''}`;
+  const h = meta.headers, L = meta.letters;
+  document.getElementById('foot').innerHTML =
+    `<b>Columnas leídas:</b> ${esc(h.id)} (${L.id}) · ${esc(h.fecha)} (${L.fecha}) · ${esc(h.unidad)} (${L.unidad}) · ${esc(h.monto)} (${L.monto}).<br>` +
+    `${meta.lineas.toLocaleString('es-MX')} líneas de producto → ${meta.idsUnicos.toLocaleString('es-MX')} IDs únicos → ` +
+    `${opps.length.toLocaleString('es-MX')} con Monto (convertido) ≥ ${UMBRAL.toLocaleString('es-MX')}. Hoja: "${esc(meta.sheetName)}".`;
+  renderFilters(); render();
+  document.getElementById('dropScreen').classList.add('hidden');
+  document.getElementById('report').classList.remove('hidden');
+  document.getElementById('topActions').classList.remove('hidden');
+}
+
+const dropzone = document.getElementById('dropzone'), fileInput = document.getElementById('fileInput'), dropError = document.getElementById('dropError');
+function handleFile(file){
+  dropError.classList.add('hidden');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try { load(XLSX.read(e.target.result, {type:'array', cellDates:true})); }
+    catch (err){ console.error(err); dropError.textContent = 'No pude leer este archivo: ' + err.message; dropError.classList.remove('hidden'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+dropzone.onclick = () => fileInput.click();
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('drag'); if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); fileInput.value = ''; });
+
+document.getElementById('unitSel').onchange = e => { S.unit = e.target.value; render(); };
+document.getElementById('search').oninput = e => { S.q = e.target.value.trim(); render(); };
+document.getElementById('btnExport').onclick = exportExcel;
+document.getElementById('btnReload').onclick = () => fileInput.click();
+wireSort('detailTable', 'sortDetail');
+wireSort('unitTable', 'sortUnit');
+</script>
+</body>
+</html>
