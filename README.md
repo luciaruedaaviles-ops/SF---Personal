@@ -95,9 +95,10 @@ Reglas:
 - Una sola fila por `ID Oportunidad` (col. B). `Monto (convertido)` (col. BF) se repite igual
   en cada línea de producto de la oportunidad, así que se toma una vez y no se suma.
 - Se quedan solo las oportunidades con `Monto (convertido)` ≥ 500,000.
-- **No** se aplica el filtro de Tipo de registro del tablero principal: entran también las
-  variantes "Secundaria".
+- Solo `Tipo de registro de la oportunidad` (col. Y) = `Oportunidad Estándar` u
+  `Oportunidad Fast Track` (mismo filtro que el tablero principal; quedan fuera las variantes
+  "Secundaria").
 - Filtros: año de creación, Unidad Comercial y búsqueda por ID, cuenta o tema. "Descargar Excel"
   exporta las dos tablas con el filtro activo.
 - Las columnas se ubican por el nombre del encabezado; si el nombre cambia, se usa la letra
-  (B, L, M, BF). Al pie del reporte se muestran las columnas que se leyeron.
+  (B, L, M, BF, Y). Al pie del reporte se muestran las columnas que se leyeron.

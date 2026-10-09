@@ -127,8 +127,8 @@
     </div>
     <div class="drop-error hidden" id="dropError"></div>
     <div class="rules">
-      <b>Columnas que usa:</b> ID Oportunidad (B) · Fecha de creación (L) · Unidad de Comercial (M) · Monto (convertido) (BF).<br>
-      <b>Reglas:</b> una sola fila por ID Oportunidad (el monto se repite en cada línea de producto, así que no se suma) · se quedan solo las de Monto (convertido) ≥ 500,000.
+      <b>Columnas que usa:</b> ID Oportunidad (B) · Fecha de creación (L) · Unidad de Comercial (M) · Monto (convertido) (BF) · Tipo de registro de la oportunidad (Y).<br>
+      <b>Reglas:</b> solo Tipo de registro = Oportunidad Estándar u Oportunidad Fast Track · una sola fila por ID Oportunidad (el monto se repite en cada línea de producto, así que no se suma) · se quedan solo las de Monto (convertido) ≥ 500,000.
     </div>
   </div>
 
@@ -172,12 +172,15 @@
 
 <script>
 const UMBRAL = 500000;
+// Solo estos tipos de registro (excluye las variantes "Secundaria", venta indirecta).
+const TIPO_REGISTRO_PERMITIDO = new Set(['Oportunidad Estándar', 'Oportunidad Fast Track']);
 // Se buscan por nombre de encabezado; si Salesforce cambia el nombre, se usa la letra de columna.
 const COLS = {
   id:      {name:'ID Oportunidad',      letter:'B'},
   fecha:   {name:'Fecha de creación',   letter:'L'},
   unidad:  {name:'Unidad de Comercial', letter:'M'},
   monto:   {name:'Monto (convertido)',  letter:'BF'},
+  tipo:    {name:'Tipo de registro de la oportunidad', letter:'Y'},
   etapa:   {name:'Etapa',               letter:null},
   cuenta:  {name:'Cuenta',              letter:null},
   tema:    {name:'Tema',                letter:null},
@@ -221,7 +224,7 @@ function parseWorkbook(wb){
     if (i < 0 && c.letter) i = XLSX.utils.decode_col(c.letter);
     idx[k] = i;
   }
-  for (const k of ['id','fecha','unidad','monto']){
+  for (const k of ['id','fecha','unidad','monto','tipo']){
     if (idx[k] < 0) throw new Error('No encontré la columna "' + COLS[k].name + '".');
   }
 
@@ -238,12 +241,13 @@ function parseWorkbook(wb){
   }
 
   const byId = new Map();
-  let lineas = 0;
+  let lineas = 0, excluidas = 0;
   for (let r = hdrRow + 1; r < aoa.length; r++){
     const row = aoa[r]; if (!row) continue;
     const id = row[idx.id];
     if (id == null || String(id).trim() === '') continue;
     lineas++;
+    if (!TIPO_REGISTRO_PERMITIDO.has(String(row[idx.tipo] ?? '').trim())){ excluidas++; continue; }
     const key = String(id).trim();
     if (byId.has(key)) continue; // una fila por ID: el monto es de la oportunidad, no de la línea
     const get = k => idx[k] >= 0 ? row[idx[k]] : null;
@@ -260,9 +264,9 @@ function parseWorkbook(wb){
   }
   const all = [...byId.values()];
   const opps = all.filter(o => isFinite(o.monto) && o.monto >= UMBRAL);
-  meta.lineas = lineas; meta.idsUnicos = all.length;
-  meta.headers = {id:header[idx.id], fecha:header[idx.fecha], unidad:header[idx.unidad], monto:header[idx.monto]};
-  meta.letters = {id:XLSX.utils.encode_col(idx.id), fecha:XLSX.utils.encode_col(idx.fecha), unidad:XLSX.utils.encode_col(idx.unidad), monto:XLSX.utils.encode_col(idx.monto)};
+  meta.lineas = lineas; meta.excluidas = excluidas; meta.idsUnicos = all.length;
+  meta.headers = {id:header[idx.id], fecha:header[idx.fecha], unidad:header[idx.unidad], monto:header[idx.monto], tipo:header[idx.tipo]};
+  meta.letters = {id:XLSX.utils.encode_col(idx.id), fecha:XLSX.utils.encode_col(idx.fecha), unidad:XLSX.utils.encode_col(idx.unidad), monto:XLSX.utils.encode_col(idx.monto), tipo:XLSX.utils.encode_col(idx.tipo)};
   return {opps, meta};
 }
 
@@ -399,8 +403,8 @@ function load(wb){
     `Corte: ${meta.corte ? fmtDate(meta.corte) : 'fecha no detectada'}${meta.autor ? ' · Generado por ' + meta.autor : ''}`;
   const h = meta.headers, L = meta.letters;
   document.getElementById('foot').innerHTML =
-    `<b>Columnas leídas:</b> ${esc(h.id)} (${L.id}) · ${esc(h.fecha)} (${L.fecha}) · ${esc(h.unidad)} (${L.unidad}) · ${esc(h.monto)} (${L.monto}).<br>` +
-    `${meta.lineas.toLocaleString('es-MX')} líneas de producto → ${meta.idsUnicos.toLocaleString('es-MX')} IDs únicos → ` +
+    `<b>Columnas leídas:</b> ${esc(h.id)} (${L.id}) · ${esc(h.fecha)} (${L.fecha}) · ${esc(h.unidad)} (${L.unidad}) · ${esc(h.monto)} (${L.monto}) · ${esc(h.tipo)} (${L.tipo}).<br>` +
+    `${meta.lineas.toLocaleString('es-MX')} líneas de producto → ${meta.excluidas.toLocaleString('es-MX')} excluidas por Tipo de registro (solo Oportunidad Estándar y Oportunidad Fast Track) → ${meta.idsUnicos.toLocaleString('es-MX')} IDs únicos → ` +
     `${opps.length.toLocaleString('es-MX')} con Monto (convertido) ≥ ${UMBRAL.toLocaleString('es-MX')}. Hoja: "${esc(meta.sheetName)}".`;
   renderFilters(); render();
   document.getElementById('dropScreen').classList.add('hidden');
