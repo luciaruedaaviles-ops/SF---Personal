@@ -91,6 +91,9 @@
   .banner{display:flex; gap:14px; align-items:flex-start; background:linear-gradient(100deg, var(--accent-dim), var(--violet-bg)); border-radius:var(--radius); padding:14px 18px; font-size:13.5px; line-height:1.6; margin-bottom:18px;}
   .banner::before{content:''; flex:none; width:34px; height:34px; border-radius:11px; background:var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%233B5BFD' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z'/%3E%3C/svg%3E") no-repeat center;}
   .banner b{font-weight:700;}
+  .warn-pick{display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin-top:10px; color:var(--text);}
+  .warn-pick label{font-weight:700; font-size:12px;}
+  .warn-pick select{font:inherit; font-size:12px; padding:6px 12px; border-radius:999px; border:1px solid var(--border); background:var(--panel); color:var(--text); max-width:100%;}
   .warn{background:var(--bad-bg); color:var(--bad); border-radius:var(--radius); padding:12px 18px; font-size:13px; line-height:1.55; margin-bottom:14px; font-weight:500;}
 
   /* KPIs */
@@ -307,7 +310,7 @@ const COLS = {
   unidad: {name:'Unidad de Comercial',                letter:'M',  req:true},
   tipo:   {name:'Tipo de registro de la oportunidad', letter:'Y',  req:true},
   monto:  {name:'Monto (convertido)',                 letter:'BF', req:true},
-  deal:   {name:'Se agendo Deal',                     letter:'BH', req:true, alt:h => h.includes('deal') && h.includes('agend')},
+  deal:   {name:'Se agendo Deal',                     letter:'BH', req:true, alt:h => h.includes('deal') && !h.includes('mega')},
   cuenta: {name:'Cuenta',                             letter:null},
   tema:   {name:'Tema',                               letter:null},
   owner:  {name:'Propietario',                        letter:null},
@@ -346,30 +349,43 @@ function parseNum(v){
   return Number(String(v).replace(/[^0-9.\-]/g, ''));
 }
 
-function parseWorkbook(wb){
-  const sheetName = wb.SheetNames.find(n => /pipe/i.test(n)) || wb.SheetNames[0];
-  const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {header:1, raw:true, defval:null});
-
-  let hdrRow = -1;
-  for (let r = 0; r < Math.min(aoa.length, 50); r++){
-    if ((aoa[r]||[]).some(c => c != null && norm(c) === norm(COLS.id.name))){ hdrRow = r; break; }
+function parseWorkbook(wb, overrides = {}){
+  // El libro puede traer más hojas (tablas dinámicas, copias con columnas extra). Se usa la hoja cuyo
+  // encabezado tiene más columnas conocidas; en empate, la que se llama "Pipe…".
+  const nombres = Object.values(COLS).map(c => norm(c.name));
+  let best = null;
+  for (const name of wb.SheetNames){
+    const ws = wb.Sheets[name];
+    if (!ws || !ws['!ref']) continue;
+    const rng = XLSX.utils.decode_range(ws['!ref']); rng.s.c = 0; rng.s.r = 0;   // índices = letras reales de columna
+    const a = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null, range:rng});
+    for (let r = 0; r < Math.min(a.length, 50); r++){
+      const rowN = (a[r] || []).map(norm);
+      if (!rowN.includes(norm(COLS.id.name))) continue;
+      const score = nombres.filter(n => rowN.includes(n)).length * 2 + (/pipe/i.test(name) ? 1 : 0);
+      if (!best || score > best.score) best = {name, aoa:a, hdrRow:r, score};
+      break;
+    }
   }
-  if (hdrRow < 0) throw new Error('No encontré el encabezado "ID Oportunidad" en la hoja "' + sheetName + '".');
+  if (!best) throw new Error('No encontré el encabezado "ID Oportunidad" en ninguna hoja del archivo.');
+  const sheetName = best.name, aoa = best.aoa, hdrRow = best.hdrRow;
 
   const header = aoa[hdrRow].map(h => h == null ? '' : String(h).trim());
   // Encabezados comparados sin acentos, mayúsculas ni espacios dobles ("Se agendó Deal" = "Se agendo Deal").
   const headerN = header.map(norm);
   const idx = {};
+  let dealPorNombre = false;
   for (const [k, c] of Object.entries(COLS)){
-    let i = headerN.indexOf(norm(c.name));
+    let i = overrides[k] ?? headerN.indexOf(norm(c.name));
     if (i < 0 && c.alt) i = headerN.findIndex(c.alt);
+    if (k === 'deal') dealPorNombre = i >= 0;
     if (i < 0 && c.letter) i = XLSX.utils.decode_col(c.letter);
     idx[k] = i;
     if (c.req && i < 0) throw new Error('No encontré la columna "' + c.name + '".');
   }
 
   // Fecha de corte y autor desde el encabezado del reporte ("A partir de ... • Generado por ...")
-  const meta = {sheetName};
+  const meta = {sheetName, header, dealIdx: idx.deal, dealPorNombre, dealManual: overrides.deal != null};
   for (let r = 0; r < hdrRow; r++){
     const cell = (aoa[r]||[]).find(v => typeof v === 'string' && v.includes('A partir de'));
     if (cell){
@@ -737,8 +753,9 @@ async function saveWorkbook(wb, filename){
 }
 
 /* ---------- Carga ---------- */
-function load(wb){
-  const {opps, meta} = parseWorkbook(wb);
+function load(wb, overrides = {}){
+  const {opps, meta} = parseWorkbook(wb, overrides);
+  S.wb = wb;
   Object.assign(S, {opps, meta, unit:'ALL', year:'ALL', scope:'abiertas', q:'', ndYear:'ALL', ndMonth:'ALL', open:new Set()});
   document.getElementById('search').value = '';
   document.getElementById('topSub').textContent =
@@ -752,10 +769,17 @@ function load(wb){
   const nDeals = opps.filter(conDeal).length;
   warn.classList.toggle('hidden', nDeals > 0);
   if (!nDeals){
-    const vals = [...new Set(opps.map(o => o.dealRaw).filter(Boolean))].slice(0, 5);
-    warn.innerHTML = `<b>No encontré ninguna oportunidad con deal.</b> Leí la columna <b>${esc(meta.cols[COLS_REQ.indexOf('deal')])}</b> y ` +
-      (vals.length ? `trae valores como: ${vals.map(v => '"' + esc(v) + '"').join(', ')}.` : 'viene vacía en todas las filas.') +
-      ` Revisa que el Excel traiga la columna "Se agendo Deal" con "SI" / "SI - Corporativo".`;
+    const vals = [...new Set(opps.map(o => o.dealRaw).filter(Boolean))].slice(0, 3);
+    const colTxt = esc(meta.cols[COLS_REQ.indexOf('deal')]);
+    const porQue = meta.dealPorNombre || meta.dealManual
+      ? `La columna <b>${colTxt}</b> ` + (vals.length ? `no trae ningún "SI" (trae, por ejemplo: ${vals.map(v => '"' + esc(v) + '"').join(', ')}).` : 'viene vacía en todas las filas.')
+      : `Este Excel <b>no trae la columna "Se agendo Deal"</b>${meta.header[meta.dealIdx] ? ` (en la columna ${XLSX.utils.encode_col(meta.dealIdx)}, donde solía estar, ahora viene "${esc(meta.header[meta.dealIdx])}")` : ''}. Revisa que el reporte de Salesforce incluya ese campo antes de exportarlo, o elige abajo la columna correcta.`;
+    const opts = meta.header.map((h, i) => [i, h]).filter(([, h]) => h)
+      .map(([i, h]) => `<option value="${i}" ${i === meta.dealIdx && (meta.dealPorNombre || meta.dealManual) ? 'selected' : ''}>${esc(h)} (${XLSX.utils.encode_col(i)})</option>`).join('');
+    warn.innerHTML = `<b>No encontré ninguna oportunidad con deal.</b> Leí la hoja <b>"${esc(meta.sheetName)}"</b>. ${porQue}` +
+      `<div class="warn-pick"><label for="dealColPick">¿En qué columna viene el deal?</label>` +
+      `<select id="dealColPick"><option value="">Elige una columna…</option>${opts}</select></div>`;
+    document.getElementById('dealColPick').onchange = e => { if (e.target.value !== '') load(S.wb, {deal: Number(e.target.value)}); };
   }
   renderFilters(); render();
   document.getElementById('dropScreen').classList.add('hidden');
