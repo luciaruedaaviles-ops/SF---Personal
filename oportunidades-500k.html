@@ -91,6 +91,7 @@
   .banner{display:flex; gap:14px; align-items:flex-start; background:linear-gradient(100deg, var(--accent-dim), var(--violet-bg)); border-radius:var(--radius); padding:14px 18px; font-size:13.5px; line-height:1.6; margin-bottom:18px;}
   .banner::before{content:''; flex:none; width:34px; height:34px; border-radius:11px; background:var(--panel) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%233B5BFD' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z'/%3E%3C/svg%3E") no-repeat center;}
   .banner b{font-weight:700;}
+  .warn{background:var(--bad-bg); color:var(--bad); border-radius:var(--radius); padding:12px 18px; font-size:13px; line-height:1.55; margin-bottom:14px; font-weight:500;}
 
   /* KPIs */
   .kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; margin-bottom:22px;}
@@ -231,6 +232,7 @@
       </div>
     </div>
 
+    <div class="warn hidden" id="warn"></div>
     <div class="banner" id="banner"></div>
     <div class="kpis" id="kpis"></div>
 
@@ -305,7 +307,7 @@ const COLS = {
   unidad: {name:'Unidad de Comercial',                letter:'M',  req:true},
   tipo:   {name:'Tipo de registro de la oportunidad', letter:'Y',  req:true},
   monto:  {name:'Monto (convertido)',                 letter:'BF', req:true},
-  deal:   {name:'Se agendo Deal',                     letter:'BH', req:true},
+  deal:   {name:'Se agendo Deal',                     letter:'BH', req:true, alt:h => h.includes('deal') && h.includes('agend')},
   cuenta: {name:'Cuenta',                             letter:null},
   tema:   {name:'Tema',                               letter:null},
   owner:  {name:'Propietario',                        letter:null},
@@ -313,6 +315,7 @@ const COLS = {
   cierre: {name:'Fecha Real de Cierre',               letter:'J'}
 };
 
+const COLS_REQ = Object.keys(COLS).filter(k => COLS[k].req || k === 'vertical' || k === 'cierre');
 const S = {
   opps:[], meta:{}, unit:'ALL', year:'ALL', scope:'abiertas', q:'', ndYear:'ALL', ndMonth:'ALL', open:new Set(),
   sortDeal:{key:'fecha', dir:-1}, sortNoDeal:{key:'fecha', dir:-1}
@@ -327,6 +330,7 @@ const fmtN = v => v.toLocaleString('es-MX');
 const fmtPct = (a, b) => b ? Math.round(a / b * 100) + '%' : '—';
 const fmtDate = d => d ? d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric', timeZone:'UTC'}) : '—';
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm = t => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 const slug = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
 const etapaRank = e => { const i = ETAPA_ORDEN.indexOf(e); return i < 0 ? 99 : i; };
 
@@ -348,14 +352,17 @@ function parseWorkbook(wb){
 
   let hdrRow = -1;
   for (let r = 0; r < Math.min(aoa.length, 50); r++){
-    if ((aoa[r]||[]).some(c => c != null && String(c).trim() === COLS.id.name)){ hdrRow = r; break; }
+    if ((aoa[r]||[]).some(c => c != null && norm(c) === norm(COLS.id.name))){ hdrRow = r; break; }
   }
   if (hdrRow < 0) throw new Error('No encontré el encabezado "ID Oportunidad" en la hoja "' + sheetName + '".');
 
   const header = aoa[hdrRow].map(h => h == null ? '' : String(h).trim());
+  // Encabezados comparados sin acentos, mayúsculas ni espacios dobles ("Se agendó Deal" = "Se agendo Deal").
+  const headerN = header.map(norm);
   const idx = {};
   for (const [k, c] of Object.entries(COLS)){
-    let i = header.indexOf(c.name);
+    let i = headerN.indexOf(norm(c.name));
+    if (i < 0 && c.alt) i = headerN.findIndex(c.alt);
     if (i < 0 && c.letter) i = XLSX.utils.decode_col(c.letter);
     idx[k] = i;
     if (c.req && i < 0) throw new Error('No encontré la columna "' + c.name + '".');
@@ -395,6 +402,7 @@ function parseWorkbook(wb){
       monto: parseNum(get('monto')),
       // "SI", "SI - Corporativo", ... = con deal; vacío o cualquier otro valor = sin deal.
       deal: /^s[ií]\b/i.test(dealRaw) ? dealRaw : SIN_DEAL,
+      dealRaw,
       cuenta: String(get('cuenta') ?? '').trim(),
       tema: String(get('tema') ?? '').trim(),
       owner: String(get('owner') ?? '').trim(),
@@ -407,7 +415,7 @@ function parseWorkbook(wb){
   const ref = meta.corte || new Date();
   opps.forEach(o => { o.dias = o.fecha ? Math.max(0, Math.round((ref - o.fecha) / 864e5)) : null; });
   Object.assign(meta, {lineas, excluidasTipo, idsUnicos: all.length, mayores: all.filter(pasaMonto).length});
-  meta.cols = Object.keys(COLS).filter(k => COLS[k].req || k === 'vertical' || k === 'cierre').map(k => `${header[idx[k]] || COLS[k].name} (${XLSX.utils.encode_col(idx[k])})`);
+  meta.cols = COLS_REQ.map(k => `${header[idx[k]] || "(sin encabezado)"} (${XLSX.utils.encode_col(idx[k])})`);
   return {opps, meta};
 }
 
@@ -724,6 +732,15 @@ function load(wb){
     `${fmtN(meta.lineas)} líneas de producto · ${fmtN(meta.excluidasTipo)} excluidas por Tipo de registro (solo Oportunidad Estándar y Fast Track) · ` +
     `${fmtN(meta.idsUnicos)} oportunidades únicas · ${fmtN(meta.mayores)} con Monto (convertido) ≥ ${fmtN(UMBRAL)} en valor absoluto (abiertas y cerradas). ` +
     `Clic en una Unidad del cuadro resumen para abrir sus etapas. Hoja: "${esc(meta.sheetName)}".`;
+  const warn = document.getElementById('warn');
+  const nDeals = opps.filter(conDeal).length;
+  warn.classList.toggle('hidden', nDeals > 0);
+  if (!nDeals){
+    const vals = [...new Set(opps.map(o => o.dealRaw).filter(Boolean))].slice(0, 5);
+    warn.innerHTML = `<b>No encontré ninguna oportunidad con deal.</b> Leí la columna <b>${esc(meta.cols[COLS_REQ.indexOf('deal')])}</b> y ` +
+      (vals.length ? `trae valores como: ${vals.map(v => '"' + esc(v) + '"').join(', ')}.` : 'viene vacía en todas las filas.') +
+      ` Revisa que el Excel traiga la columna "Se agendo Deal" con "SI" / "SI - Corporativo".`;
+  }
   renderFilters(); render();
   document.getElementById('dropScreen').classList.add('hidden');
   document.getElementById('report').classList.remove('hidden');
