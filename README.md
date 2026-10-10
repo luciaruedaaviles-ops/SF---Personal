@@ -82,6 +82,10 @@ Un único archivo HTML (`index.html`) con CSS y JS inline. Librerías externas c
 
 ## Reporte: Oportunidades ≥ USD 500K · Seguimiento de Deal (`oportunidades-500k.html`)
 
+También está publicado como página privada de Claude (enlace fijo, siempre la última versión):
+https://claude.ai/artifact/45swFLaSSQFerq31Yryqwz. Ahí el botón "Descargar Excel" pide confirmación
+antes de guardar; abierto como archivo local, descarga directo.
+
 Página aparte, del mismo tipo (estática, sin servidor), que lee el mismo Excel semanal de
 "Pipe con productos FCST" y responde: de las oportunidades de USD 500K o más, ¿cuántas ya
 tuvieron deal y cuántas no?

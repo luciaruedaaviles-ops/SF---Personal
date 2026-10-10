@@ -51,7 +51,7 @@
   .hidden{display:none !important;}
 
   /* Encabezado */
-  .topbar{position:sticky; top:0; z-index:20; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  .topbar{position:sticky; top:env(safe-area-inset-top, 0px); z-index:20; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
     padding:16px 32px; color:#fff; background:linear-gradient(110deg, #2E4BF0 0%, #5B4BF5 55%, #8A56F2 100%); box-shadow:0 4px 18px rgba(59,91,253,.25);}
   .brand{display:flex; align-items:center; gap:12px;}
   .logo{width:38px; height:38px; border-radius:12px; background:rgba(255,255,255,.18); display:grid; place-items:center; flex:none;}
@@ -717,7 +717,23 @@ function exportExcel(){
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(det(deals, S.sortDeal), {cellDates:true}), 'Con deal');
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(det(noDeals, S.sortNoDeal), {cellDates:true}), 'Sin deal ≥ 500K');
   const tag = (S.meta.corte || new Date()).toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `Deals_${tag}${S.unit === 'ALL' ? '' : '_' + S.unit.replace(/[^\w]+/g, '_')}.xlsx`);
+  saveWorkbook(wb, `Deals_${tag}${S.unit === 'ALL' ? '' : '_' + S.unit.replace(/[^\w]+/g, '_')}.xlsx`);
+}
+
+// Publicado como página de Claude, la descarga pasa por la capacidad "downloads" (el visor pide
+// confirmación); abierto como archivo local, se descarga directo con SheetJS.
+const downloadsReady = window.claude?.use ? window.claude.use('downloads').catch(() => null) : Promise.resolve(null);
+async function saveWorkbook(wb, filename){
+  const btn = document.getElementById('btnExport');
+  const dl = await downloadsReady;
+  if (!dl){ XLSX.writeFile(wb, filename); return; }
+  const data = new Blob([XLSX.write(wb, {type:'array', bookType:'xlsx'})]);
+  try { await dl.save({filename, data}); }
+  catch (err){
+    if (err && err.code === 'declined') return;
+    btn.textContent = err && err.code === 'rate_limited' ? 'Espera un momento…' : 'No se pudo descargar';
+    setTimeout(() => { btn.textContent = 'Descargar Excel'; }, 3000);
+  }
 }
 
 /* ---------- Carga ---------- */
